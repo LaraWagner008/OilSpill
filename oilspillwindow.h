@@ -64,6 +64,17 @@ private:
     //----------------------------------
     // существующая модель
     //----------------------------------
+    QVector<double> graphTimes;
+    QVector<double> graphCosts;
+
+    QVector<int> graphUAVCounts;
+    QVector<int> graphHeliCounts;
+    QVector<int> graphPlaneCounts;
+    QVector<QString> graphUAVNames;
+    QVector<QString> graphHeliNames;
+    QVector<QString> graphPlaneNames;
+
+    QVector<double> graphOperationTimes;
 
     void drawScene();
     void drawWater();
