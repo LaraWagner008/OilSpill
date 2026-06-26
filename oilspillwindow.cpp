@@ -170,7 +170,15 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     // PARTICLES
     // =====================================================
 
-    for(int i=0; i<950; i++)
+
+    int particleCount =
+            qBound(
+                300,
+                int(oilVolume * 4),
+                3000);
+
+    //for(int i=0; i<950; i++)
+    for(int i=0; i<particleCount; i++)
     {
         double angle =
                 degToRad(qrand()%360);
@@ -1027,6 +1035,7 @@ void OilSpillWindow::calculateOperation()
         return;
     }
 
+    /*
 // надолго так не оставлять, пока открыто для рисков
     double tDetect =
             0.3 * timeLimit;
@@ -1034,7 +1043,7 @@ void OilSpillWindow::calculateOperation()
     double tLiquid =
             0.7 * timeLimit;
 
-
+*/
     if(!db.isOpen())
         return;
 
@@ -1077,14 +1086,15 @@ void OilSpillWindow::calculateOperation()
     double boomSpeed =
             c.value(7).toDouble();
 
+    /*
     double fuelPrice =
-            c.value(8).toDouble();
+            c.value(8).toDouble();*/
 
     double boomPrice =
-            c.value(9).toDouble();
+            c.value(8).toDouble();
 
     double dispersantPrice =
-            c.value(10).toDouble();
+            c.value(9).toDouble();
 
     //--------------------------------------------------
     // масса нефти
@@ -1147,6 +1157,7 @@ void OilSpillWindow::calculateOperation()
     graphPlaneCounts.clear();
 
     graphOperationTimes.clear();
+
     for(int t = 1; t <= ceil(timeLimit); t++)
     {
 
@@ -1164,11 +1175,43 @@ void OilSpillWindow::calculateOperation()
         QString localBestHeliName;
         QString localBestPlaneName;
 
+        double bestLocalCostForTime = 1e100;
+
+        double bestLocalEpsilon = 0.0;
+        double bestLocalBeta = 0.0;
+        //double beta = 0.0;
+
+        /*
         double tDetect =
                 0.3 * t;
 
         double tLiquid =
                 0.7 * t;
+        */
+        for(double epsilon = 0.1;
+            epsilon <= 0.9;
+            epsilon += 0.1)
+        {
+            double tDetect =
+                    epsilon *
+                    t;
+
+            double tLiquid =
+                    (1.0 - epsilon) *
+                    t;
+
+            for(double beta = 0.1;
+                beta <= 0.9;
+                beta += 0.1)
+            {
+
+                qDebug()
+                        << "EPSILON"
+                        << epsilon;
+
+                qDebug()
+                        << "BETA"
+                        << beta;
 
     while(uavs.next())
     {
@@ -1193,11 +1236,14 @@ void OilSpillWindow::calculateOperation()
         double costUAV =
                 uavs.value(6).toDouble();
 
+        double fuelPriceUAV =
+                c.value(7).toDouble();
+
         //--------------------------------------------------
         // производительность БПЛА
         //--------------------------------------------------
 
-        double stripWidth =
+       /* double stripWidth =
                 2.0 *
                 (flightHeight * 1000.0) *
                 tan(
@@ -1206,23 +1252,84 @@ void OilSpillWindow::calculateOperation()
 
         double qUAV =
                 vUAV *
-                stripWidth;
+                stripWidth;*/
 
 
         double tFlightUAV =
                 fuelWeightUAV /
                 fuelConsumptionUAV;
 
+        double searchRadius =
+                driftVelocity *
+                tDetect;
+
+        double stripWidth =
+                2.0 *
+                flightHeight *
+                tan(
+                    degToRad(
+                        viewingAngle / 2.0));
+
+        double thetaSpiral =
+                (2.0 * M_PI * searchRadius)
+                /
+                stripWidth;
+
+        double totalSearchLength =
+                (stripWidth /
+                 (4.0 * M_PI))
+                *
+                (
+                    thetaSpiral *
+                    sqrt(
+                        1.0 +
+                        thetaSpiral *
+                        thetaSpiral)
+                    +
+                    log(
+                        thetaSpiral +
+                        sqrt(
+                            1.0 +
+                            thetaSpiral *
+                            thetaSpiral))
+                );
+
+        double searchLengthOneUAV =
+                rangeUAV
+                -
+                2.0 *
+                distanceBase;
+
         double searchAreaKm2 =
                 searchArea / 1000000.0;
 
+
         double nFlightsUAV =
+                ceil(
+                    totalSearchLength
+                    /
+                    searchLengthOneUAV);
+
+
+       /* double nFlightsUAV =
                 searchArea /
                 (qUAV * tFlightUAV);
-
         double tFlightMission =
                 2.0*distanceBase /vUAV +
-                searchArea/qUAV;
+                searchArea/qUAV;*/
+
+
+        double tFlightMission =
+                (
+                    searchLengthOneUAV
+                    +
+                    2.0 *
+                    distanceBase
+                )
+                /
+                vUAV;
+
+
 
 
         double countUAV =
@@ -1231,10 +1338,34 @@ void OilSpillWindow::calculateOperation()
                     tFlightMission /
                     tDetect);
 
+        double nFlightsPerUAV =
+        ceil(nFlightsUAV / countUAV);
+
+        int tRealUAV =
+        nFlightsPerUAV *
+        tFlightMission;
+
+        qDebug()
+        << "ТУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУТ"
+        << "searchRadius="
+        << searchRadius
+        << "totalSearchLength="
+        << totalSearchLength
+        << "searchLengthOneUAV="
+        << searchLengthOneUAV
+        << "thetaSpiral="
+        << thetaSpiral
+           ;
+
+        qDebug()
+            << "distanceBase =" << distanceBase
+            << "rangeUAV =" << rangeUAV
+            << "vDrift =" << driftVelocity;
+
         qDebug()
             << "UAV CHECK основной расчет"
             << uavName
-            << "qUAV=" << qUAV
+         //   << "qUAV=" << qUAV
             << "tFlightUAV=" << tFlightUAV
             << "nFlightsUAV=" << nFlightsUAV
             << "tFlightMission=" << tFlightMission
@@ -1244,12 +1375,16 @@ void OilSpillWindow::calculateOperation()
         // ограничение по дальности
         //--------------------------------------------------
         qDebug() << "CHECK UAV";
-        if(rangeUAV < 240)
+       /* if(rangeUAV < 240)
         {
             qDebug() << "UAV range fail:"
                      << uavName
                      << rangeUAV;
 
+            continue;
+        }*/
+        if(searchLengthOneUAV <= 0.0)
+        {
             continue;
         }
         //--------------------------------------------------
@@ -1286,6 +1421,9 @@ void OilSpillWindow::calculateOperation()
 
             double costHeli =
                     helis.value(7).toDouble();
+
+            double fuelPriceHeli =
+                    c.value(8).toDouble();
 
             //--------------------------------------------------
             // ограничение по дальности
@@ -1327,8 +1465,14 @@ void OilSpillWindow::calculateOperation()
                     ceil(
                         nFlightsHeli *
                         tHeliMission /
-                        (0.5 * tLiquid));
+                        (beta * tLiquid));
 
+            double nFlightsPerHeli =
+            ceil(nFlightsHeli / countHeli);
+
+            int tRealHeli =
+            nFlightsPerHeli *
+            tHeliMission;
 
             //--------------------------------------------------
             // САМОЛЕТЫ
@@ -1368,6 +1512,9 @@ void OilSpillWindow::calculateOperation()
                 double costPlane =
                         planes.value(8).toDouble();
 
+                double fuelPricePlane =
+                        c.value(8).toDouble();
+
                 //------------------------------------------
                 // ограничение по дальности
                 //------------------------------------------
@@ -1395,7 +1542,7 @@ void OilSpillWindow::calculateOperation()
                         (
                             tDetect
                             +
-                            0.5 * tLiquid
+                            beta * tLiquid
                         );
                 double areaAtArrivalKm2 =
                         areaAtArrival /
@@ -1441,6 +1588,13 @@ void OilSpillWindow::calculateOperation()
                             nFlightsPlane *
                             tPlaneMission /
                             tLiquid);
+
+                double nFlightsPerPlane =
+                ceil(nFlightsPlane / countPlane);
+
+                int tRealPlane =
+                nFlightsPerPlane *
+                tPlaneMission;
 
                 qDebug()
                     << "PLANE CHECK"
@@ -1493,11 +1647,13 @@ void OilSpillWindow::calculateOperation()
               */
 
 
-
-
+//было 26 июня:
+/*
                 double CrUAV =
                     costUAV *
                     countUAV ;
+
+
 
                 double CrHeli =
                     costHeli *
@@ -1507,7 +1663,25 @@ void OilSpillWindow::calculateOperation()
                     costPlane *
                     countPlane ;
 
+                double CrUAV =
+                    costUAV *
+                    nFlightsUAV *
+                    tFlightMission;
+                double CrHeli =
+                    costHeli *
+                    nFlightsHeli *
+                    tHeliMission;
+                double CrPlane =
+                    costPlane *
+                    nFlightsPlane *
+                    tPlaneMission;*/
 
+                double CrUAV =
+                    countUAV * tRealUAV * costUAV;
+                double CrHeli =
+                    countHeli * tRealHeli * costHeli;
+                double CrPlane =
+                    countPlane * tRealPlane * costPlane;
 
                 double Cr =
                         CrUAV +
@@ -1559,8 +1733,8 @@ void OilSpillWindow::calculateOperation()
 
 
 
-
-
+//было 26 июня топливо
+/*
                 double CfUAV =
                         fuelConsumptionUAV *
                         countUAV *
@@ -1579,6 +1753,38 @@ void OilSpillWindow::calculateOperation()
 
                         fuelPrice;
 
+                double CfUAV =
+                    nFlightsUAV *
+                    tFlightMission *
+                    fuelConsumptionUAV *
+                    fuelPrice;
+                double CfHeli =
+                    nFlightsHeli *
+                    tHeliMission *
+                    fuelConsumptionHeli *
+                    fuelPrice;
+                double CfPlane =
+                    nFlightsPlane *
+                    tPlaneMission *
+                    fuelConsumptionPlane *
+                    fuelPrice;*/
+
+                double CfUAV =
+                    countUAV *
+                    tRealUAV *
+                    fuelConsumptionUAV *
+                    fuelPriceUAV;
+                double CfHeli =
+                        countHeli *
+                        tRealHeli *
+                    fuelConsumptionHeli *
+                    fuelPriceHeli;
+                double CfPlane =
+                        countPlane *
+                        tRealPlane *
+                    fuelConsumptionPlane *
+                    fuelPricePlane;
+
 
                 double Cf =
                         CfUAV +
@@ -1588,13 +1794,14 @@ void OilSpillWindow::calculateOperation()
                 double totalUAVCost =
                         CrUAV +
                         CfUAV;
-
+/*
                 if(!uavNames.contains(uavName))
                 {
                     uavNames.push_back(uavName);
                     uavCosts.push_back(totalUAVCost);
                     uavCounts.push_back(countUAV);
                 }
+                */
 
 /*
                 uavNames.push_back(
@@ -1634,12 +1841,14 @@ void OilSpillWindow::calculateOperation()
                         CrHeli +
                         CfHeli;
 
+                /*
                 if(!heliNames.contains(heliName))
                 {
                     heliNames.push_back(heliName);
                     heliCosts.push_back(totalHeliCost);
                     heliCounts.push_back(countHeli);
                 }
+                */
 
 /*
                 heliNames.push_back(
@@ -1676,12 +1885,14 @@ void OilSpillWindow::calculateOperation()
                         CrPlane +
                         CfPlane;
 
+                /*
                 if(!planeNames.contains(planeName))
                 {
                     planeNames.push_back(planeName);
                     planeCosts.push_back(totalPlaneCost);
                     planeCounts.push_back(countPlane);
                 }
+                */
 
 /*
                 planeNames.push_back(
@@ -1756,6 +1967,29 @@ void OilSpillWindow::calculateOperation()
                         Cm;
 
                 qDebug()
+                        << "EPSILON"
+                        << epsilon
+                        << "TOTAL"
+                        << totalCost;
+                qDebug()
+                        << "BETA"
+                        << beta
+                        << "TOTAL"
+                        << totalCost;
+
+                if(totalCost < bestLocalCostForTime)
+                {
+                    bestLocalCostForTime =
+                            totalCost;
+
+                    bestLocalEpsilon =
+                            epsilon;
+
+                    bestLocalBeta =
+                            beta;
+                }
+
+                qDebug()
                         << "MAIN TOTAL COST"
                         << uavName
                         << heliName
@@ -1804,6 +2038,18 @@ void OilSpillWindow::calculateOperation()
 
                 double operationTime = tDetect + tLiquid;
 
+
+                qDebug()
+                    << "СЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАС"
+                    << "t =" << t
+                    << "operationTime =" << operationTime
+                    << "countUAV =" << countUAV
+                    << "countHeli =" << countHeli
+                    << "countPlane =" << countPlane
+                    << "Cr =" << Cr
+                    << "Cf =" << Cf
+                    << "Cm =" << Cm
+                    << "total =" << totalCost;
                 if(operationTime <= t)
                 {
                     if(totalCost < localBestCost)
@@ -1886,7 +2132,8 @@ void OilSpillWindow::calculateOperation()
             }
         }
     }
-
+}//для beta
+} //для epsilon
 /*
     if(localBestCost < 1e100)
     {
@@ -1928,6 +2175,12 @@ void OilSpillWindow::calculateOperation()
 
         graphPlaneNames.append(
             localBestPlaneName);
+
+        graphEpsilons.append(
+            bestLocalEpsilon);
+
+        graphBetas.append(
+                bestLocalBeta);
     }
 }
 
@@ -1970,7 +2223,16 @@ void OilSpillWindow::calculateOperation()
 
         bestPlane =
                 graphPlaneNames[bestIndex];
+
+        bestEpsilon =
+                graphEpsilons[bestIndex];
+
+        bestBeta =
+                graphBetas[bestIndex];
     }
+
+
+
     uavNames.clear();
     uavCosts.clear();
     uavCounts.clear();
@@ -1982,7 +2244,7 @@ void OilSpillWindow::calculateOperation()
     planeNames.clear();
     planeCosts.clear();
     planeCounts.clear();
-
+/*
     uavNames.push_back(bestUAV);
     uavCosts.push_back(bestUAVCost);
     uavCounts.push_back(bestUAVCount);
@@ -1994,8 +2256,461 @@ void OilSpillWindow::calculateOperation()
     planeNames.push_back(bestPlane);
     planeCosts.push_back(bestPlaneCost);
     planeCounts.push_back(bestPlaneCount);
+*/
+
+    double tDetectBest =
+            bestEpsilon * bestOperationTime;
+
+    double tLiquidBest =
+            (1-bestEpsilon) * bestOperationTime;
+
+    for(int i = 0; i < graphOperationTimes.size(); i++)
+    {
+        if(qFuzzyCompare(
+                graphOperationTimes[i] + 1.0,
+                bestOperationTime + 1.0))
+        {
+            continue;
+        }
+    }
+
+    QSqlQuery uavsChart(db);
+
+    uavsChart.exec("SELECT * FROM UAVs");
+
+    while(uavsChart.next())
+    {
+        QString uavName =
+                uavsChart.value(1).toString();
+
+        double vUAV =
+                uavsChart.value(2).toDouble();
+
+        double fuelConsumptionUAV =
+                uavsChart.value(5).toDouble();
+
+        double costUAV =
+                uavsChart.value(6).toDouble();
+
+        double fuelPriceUAV =
+                c.value(7).toDouble();
+
+        double stripWidth =
+                2.0 *
+                (flightHeight * 1000.0) *
+                tan(
+                    degToRad(
+                        viewingAngle / 2.0));
+        /*
+
+        double qUAV =
+                vUAV *
+                stripWidth;
+
+        double tFlightUAV =
+                uavsChart.value(4).toDouble() /
+                fuelConsumptionUAV;
+
+        double nFlightsUAV =
+                searchArea /
+                (qUAV * tFlightUAV);
+
+        double tFlightMission =
+                2.0 * distanceBase / vUAV +
+                searchArea / qUAV;
+
+        double countUAV =
+                ceil(
+                    nFlightsUAV *
+                    tFlightMission /
+                    tDetectBest);
+                    */
+
+        double searchRadius =
+                driftVelocity *
+                tDetectBest;
+        /*
+        double stripWidth =
+                2.0 *
+                flightHeight *
+                tan(
+                    degToRad(
+                        viewingAngle / 2.0));
+        */
+        double thetaSpiral =
+                (2.0 * M_PI * searchRadius)
+                /
+                stripWidth;
+
+        double totalSearchLength =
+                (stripWidth /
+                 (4.0 * M_PI))
+                *
+                (
+                    thetaSpiral *
+                    sqrt(
+                        1.0 +
+                        thetaSpiral *
+                        thetaSpiral)
+                    +
+                    log(
+                        thetaSpiral +
+                        sqrt(
+                            1.0 +
+                            thetaSpiral *
+                            thetaSpiral))
+                );
+
+        double searchLengthOneUAV =
+                uavsChart.value(3).toDouble()
+                -
+                2.0 *
+                distanceBase;
+
+        if(searchLengthOneUAV <= 0.0)
+        {
+            continue;
+        }
+
+        double nFlightsUAV =
+                ceil(
+                    totalSearchLength
+                    /
+                    searchLengthOneUAV);
+
+        double tFlightMission =
+                (
+                    searchLengthOneUAV
+                    +
+                    2.0 *
+                    distanceBase
+                )
+                /
+                vUAV;
+
+        double countUAV =
+                ceil(
+                    nFlightsUAV *
+                    tFlightMission /
+                    tDetectBest);
+
+        double nFlightsPerUAV =
+        ceil(nFlightsUAV / countUAV);
+
+        int tRealUAV =
+        nFlightsPerUAV *
+        tFlightMission;
+
+        /*
+        double CrUAV =
+                costUAV *
+                countUAV;
+
+        double CrUAV =
+            costUAV *
+            nFlightsUAV *
+            tFlightMission;*/
+        double CrUAV =
+            countUAV * tRealUAV * costUAV;
 
 
+/*
+        double CfUAV =
+                fuelConsumptionUAV *
+                countUAV *
+                fuelPrice;
+
+        double CfUAV =
+            nFlightsUAV *
+            tFlightMission *
+            fuelConsumptionUAV *
+            fuelPrice;*/
+
+        double CfUAV =
+            countUAV *
+            tRealUAV *
+            fuelConsumptionUAV *
+            fuelPriceUAV;
+
+        double totalUAVCost =
+                CrUAV +
+                CfUAV;
+
+        uavNames.push_back(uavName);
+        uavCosts.push_back(totalUAVCost);
+        uavCounts.push_back(countUAV);
+    }
+
+    QSqlQuery helisChart(db);
+
+    helisChart.exec("SELECT * FROM Helicopters");
+
+    while(helisChart.next())
+    {
+        QString heliName =
+                helisChart.value(1).toString();
+
+        double vHeli =
+                helisChart.value(2).toDouble();
+
+        double capacityHeli =
+                helisChart.value(4).toDouble();
+
+        double fuelConsumptionHeli =
+                helisChart.value(6).toDouble();
+
+        double costHeli =
+                helisChart.value(7).toDouble();
+
+        double fuelPriceHeli =
+                c.value(8).toDouble();
+
+        double nFlightsHeli =
+                ceil(
+                    boomsMass /
+                    capacityHeli);
+
+        double tBooms =
+                (perimeter / 1000.0) /
+                boomSpeed;
+
+        double tHeliFlight =
+                2.0 * distanceBase /
+                vHeli;
+
+        double tHeliMission =
+                tHeliFlight +
+                tBooms +
+                loadingTime;
+
+        double countHeli =
+                ceil(
+                    nFlightsHeli *
+                    tHeliMission /
+                    (bestBeta * tLiquidBest));
+
+        double nFlightsPerHeli =
+        ceil(nFlightsHeli / countHeli);
+
+        int tRealHeli =
+        nFlightsPerHeli *
+        tHeliMission;
+
+        /*
+        double CrHeli =
+                costHeli *
+                countHeli;
+
+        double CrHeli =
+            costHeli *
+            nFlightsHeli *
+            tHeliMission; */
+
+        double CrHeli =
+            countHeli * tRealHeli * costHeli;
+
+
+/*
+        double CfHeli =
+                fuelConsumptionHeli *
+                countHeli *
+                fuelPrice;
+
+        double CfHeli =
+            nFlightsHeli *
+            tHeliMission *
+            fuelConsumptionHeli *
+            fuelPrice;*/
+
+        double CfHeli =
+                countHeli *
+                tRealHeli *
+            fuelConsumptionHeli *
+            fuelPriceHeli;
+
+        double totalHeliCost =
+                CrHeli +
+                CfHeli;
+
+        heliNames.push_back(heliName);
+        heliCosts.push_back(totalHeliCost);
+        heliCounts.push_back(countHeli);
+    }
+
+    QSqlQuery planesChart(db);
+
+    planesChart.exec("SELECT * FROM Airplanes");
+
+    while(planesChart.next())
+    {
+        QString planeName =
+                planesChart.value(1).toString();
+
+        double vPlane =
+                planesChart.value(2).toDouble();
+
+        double capacityPlane =
+                planesChart.value(4).toDouble();
+
+        double sprayWidth =
+                planesChart.value(5).toDouble();
+
+        double fuelConsumptionPlane =
+                planesChart.value(7).toDouble();
+
+        double costPlane =
+                planesChart.value(8).toDouble();
+
+        double fuelPricePlane =
+                c.value(8).toDouble();
+
+        double areaAtArrival =
+                currentArea +
+                M_PI *
+                kSpread *
+                1000000.0 *
+                (
+                    tDetectBest +
+                    bestBeta * tLiquidBest
+                );
+
+        double dispersantVolume =
+                areaAtArrival /
+                1000000.0 *
+                sprayRate *
+                100.0;
+
+        double dispersantMassLocal =
+                dispersantVolume *
+                density /
+                1000.0;
+
+        double qSpray =
+                vPlane *
+                sprayWidth *
+                sprayRate *
+                100.0;
+
+        double tSpray =
+                areaAtArrival /
+                qSpray;
+
+        double nFlightsPlane =
+                ceil(
+                    dispersantMassLocal /
+                    capacityPlane);
+
+        double tPlaneFlight =
+                2.0 * distanceBase /
+                vPlane;
+
+        double tPlaneMission =
+                tPlaneFlight +
+                tSpray +
+                loadingTime;
+
+        double countPlane =
+                ceil(
+                    nFlightsPlane *
+                    tPlaneMission /
+                    tLiquidBest);
+
+        double nFlightsPerPlane =
+        ceil(nFlightsPlane / countPlane);
+
+        int tRealPlane =
+        nFlightsPerPlane *
+        tPlaneMission;
+/*
+        double CrPlane =
+                costPlane *
+                countPlane;
+
+        double CrPlane =
+            costPlane *
+            nFlightsPlane *
+            tPlaneMission;*/
+
+        double CrPlane =
+            countPlane * tRealPlane * costPlane;
+
+        /*
+        double CfPlane =
+                fuelConsumptionPlane *
+                countPlane *
+                fuelPrice;
+
+        double CfPlane =
+            nFlightsPlane *
+            tPlaneMission *
+            fuelConsumptionPlane *
+            fuelPrice;*/
+
+        double CfPlane =
+                countPlane *
+                tRealPlane *
+            fuelConsumptionPlane *
+            fuelPricePlane;
+
+        double totalPlaneCost =
+                CrPlane +
+                CfPlane;
+
+        planeNames.push_back(planeName);
+        planeCosts.push_back(totalPlaneCost);
+        planeCounts.push_back(countPlane);
+    }
+
+
+
+
+    riskTimes.clear();
+    riskValues.clear();
+
+    for(int i = 0; i < graphOperationTimes.size(); i++)
+    {
+        double t = graphOperationTimes[i];
+
+        double shoreDistance =
+                qMax(
+                    0.0,
+                    distanceShore -
+                    driftVelocity * t);
+
+        double shoreFactor =
+                1.0 -
+                shoreDistance /
+                distanceShore;
+
+        shoreFactor =
+                qBound(0.0, shoreFactor, 1.0);
+
+        double risk =
+                (oilVolume / 1000.0)
+                *
+                shoreFactor
+                *
+                (driftVelocity / 10.0)
+                *
+                vulnerabilityCoefficient
+                ;
+
+        risk =
+                qBound(0.0, risk, 1.0);
+
+        riskTimes.push_back(t);
+        riskValues.push_back(risk);
+    }
+
+    scenarios.clear();
+
+    QVector<double> scenarioFractions;
+
+    scenarioFractions
+            << 0.25
+            << 0.50
+            << 0.75
+            << 1.00;
 
     qDebug()
             << "MAIN COST"
@@ -2067,26 +2782,25 @@ void OilSpillWindow::calculateOperation()
             (driftVelocity / 10.0)
             *
             vulnerabilityCoefficient
-            *
-            100.0;
+           ;
 
-    if(riskValue > 100)
-        riskValue = 100;
+    if(riskValue > 1)
+        riskValue = 1;
 
     if(riskValue < 0)
         riskValue = 0;
 
-    if(riskValue <= 25)
+    if(riskValue <= 0.25)
     {
         riskLevel = "Низкий";
         riskColor = "#00ff55";
     }
-    else if(riskValue <= 35)
+    else if(riskValue <= 0.35)
     {
         riskLevel = "Средний";
         riskColor = "#ffff00";
     }
-    else if(riskValue <= 60)
+    else if(riskValue <= 0.6)
     {
         riskLevel = "Высокий";
         riskColor = "#ff8800";
@@ -2126,11 +2840,81 @@ void OilSpillWindow::calculateOperation()
 
 
 
-    scenarioTimes
-            << bestOperationTime * 0.25
-            << bestOperationTime * 0.5
-            << bestOperationTime * 0.75
-            << bestOperationTime * 1;
+    for(double fraction : scenarioFractions)
+    {
+        double targetTime =
+                bestOperationTime * fraction;
+
+        int bestScenarioIndex = 0;
+
+        double minDelta = 1e100;
+
+        for(int i = 0; i < graphOperationTimes.size(); i++)
+        {
+            double delta =
+                    qAbs(
+                        graphOperationTimes[i]
+                        -
+                        targetTime);
+
+            if(delta < minDelta)
+            {
+                minDelta = delta;
+                bestScenarioIndex = i;
+            }
+        }
+
+        RiskScenario s;
+
+        s.time =
+                graphOperationTimes[bestScenarioIndex];
+
+        s.cost =
+                graphCosts[bestScenarioIndex] * 1000000.0;
+
+        s.uav =
+                graphUAVNames[bestScenarioIndex];
+
+        s.heli =
+                graphHeliNames[bestScenarioIndex];
+
+        s.plane =
+                graphPlaneNames[bestScenarioIndex];
+
+        s.uavCount =
+                graphUAVCounts[bestScenarioIndex];
+
+        s.heliCount =
+                graphHeliCounts[bestScenarioIndex];
+
+        s.planeCount =
+                graphPlaneCounts[bestScenarioIndex];
+
+        s.risk =
+                riskValues[bestScenarioIndex];
+        if(s.risk <= 0.25)
+        {
+            s.level = "Низкий";
+            s.color = "#00ff00";
+        }
+        else if(s.risk <= 0.35)
+        {
+            s.level = "Средний";
+            s.color = "#ffff00";
+        }
+        else if(s.risk <= 0.6)
+        {
+            s.level = "Высокий";
+            s.color = "#ff8800";
+        }
+        else
+        {
+            s.level = "Критический";
+            s.color = "#ff0000";
+        }
+
+        scenarios.push_back(s);
+    }
 
     for(int i = 0; i < scenarioTimes.size(); i++)
     {
@@ -2138,16 +2922,10 @@ void OilSpillWindow::calculateOperation()
                 scenarioTimes[i];
 
         double scenarioDetect =
-                tDetect *
-                scenarioTime /
-                timeLimit;
-        //0.3*scenarioTime
+                bestEpsilon * scenarioTime;
 
         double scenarioLiquid =
-                tLiquid *
-                scenarioTime /
-                timeLimit;
-        //0.7*scenarioTime
+                (1-bestEpsilon) * scenarioTime;
 
         double scenarioBestCost =
                 1e100;
@@ -2192,777 +2970,7 @@ void OilSpillWindow::calculateOperation()
                 (driftVelocity / 10.0)
                 *
                 vulnerabilityCoefficient
-                *
-                100.0;
-/*
-        double timePenalty =
-                scenarioTime /
-                timeLimit;
-
-        scenarioRisk =
-                (oilVolume / 1000.0)
-                *
-                shoreFactor
-                *
-                (driftVelocity / 10.0)
-                *
-                vulnerabilityCoefficient
-                *
-                timePenalty
-                *
-                100.0;
-                */
-
-        QSqlQuery uavsScenario(db);
-
-        uavsScenario.exec(
-                    "SELECT * FROM UAVs");
-
-
-        while(uavsScenario.next())
-        {
-            int idUAV =
-                    uavsScenario.value(0).toInt();
-
-            QString uavName =
-                    uavsScenario.value(1).toString();
-
-            double vUAV =
-                    uavsScenario.value(2).toDouble();
-
-            double rangeUAV =
-                    uavsScenario.value(3).toDouble();
-
-            double fuelWeightUAV =
-                    uavsScenario.value(4).toDouble();
-
-            double fuelConsumptionUAV =
-                    uavsScenario.value(5).toDouble();
-
-            double costUAV =
-                    uavsScenario.value(6).toDouble();
-
-            //--------------------------------------------------
-            // производительность БПЛА
-            //--------------------------------------------------
-
-            double stripWidth =
-                    2.0 *
-                    (flightHeight * 1000.0) *
-                    tan(
-                        degToRad(
-                            viewingAngle/2.0));
-
-            double qUAV =
-                    vUAV *
-                    stripWidth;
-
-
-
-            double tFlightUAV =
-                    fuelWeightUAV /
-                    fuelConsumptionUAV;
-
-            double searchAreaKm2 =
-                    searchArea / 1000000.0;
-
-            double nFlightsUAV =
-                    searchArea /
-                    (qUAV * tFlightUAV);
-
-            double tFlightMission =
-                    2.0*distanceBase /vUAV +
-                    searchArea/qUAV;
-
-
-            double countUAV =
-                    ceil(
-                        nFlightsUAV *
-                        tFlightMission /
-                        scenarioDetect);
-            qDebug()
-                    << "SCENARIO"
-                    << scenarioTime
-                    << "UAV"
-                    << countUAV;
-            //--------------------------------------------------
-            // ограничение по дальности
-            //--------------------------------------------------
-            qDebug() << "CHECK UAV for RISK";
-            if(rangeUAV < 240)
-            {
-                qDebug() << "UAV range fail:"
-                         << uavName
-                         << rangeUAV;
-
-                continue;
-            }
-            //--------------------------------------------------
-            // ВЕРТОЛЕТЫ
-            //--------------------------------------------------
-
-            QSqlQuery helisScenario(db);
-
-            helisScenario.exec(
-                        "SELECT * FROM Helicopters");
-
-            while(helisScenario.next())
-            {
-                int idHeli =
-                        helisScenario.value(0).toInt();
-
-                QString heliName =
-                        helisScenario.value(1).toString();
-
-                double vHeli =
-                        helisScenario.value(2).toDouble();
-
-                double rangeHeli =
-                        helisScenario.value(3).toDouble();
-
-                double capacityHeli =
-                        helisScenario.value(4).toDouble();
-
-                double fuelWeightHeli =
-                        helisScenario.value(5).toDouble();
-
-                double fuelConsumptionHeli =
-                        helisScenario.value(6).toDouble();
-
-                double costHeli =
-                        helisScenario.value(7).toDouble();
-
-                //--------------------------------------------------
-                // ограничение по дальности
-                //--------------------------------------------------
-
-                if(rangeHeli < 240)
-                {
-                    qDebug() << "HELI range fail:"
-                             << heliName
-                             << rangeHeli;
-
-                    continue;
-                }
-                //--------------------------------------------------
-                // ВК
-                //--------------------------------------------------
-
-                double nFlightsHeli =
-                        ceil(
-                            boomsMass /
-                            capacityHeli);
-
-                double tBooms =
-                        (perimeter/1000.0) /
-                        boomSpeed;
-
-                double tHeliFlight =
-                        2.0 * distanceBase  /
-                        vHeli;
-
-                double tHeliMission =
-                        tHeliFlight
-                        +
-                        tBooms
-                        +
-                        loadingTime;
-
-                double countHeli =
-                        ceil(
-                            nFlightsHeli *
-                            tHeliMission /
-                            (0.5 * scenarioLiquid));
-
-                qDebug()
-                        << "SCENARIO"
-                        << scenarioTime
-                        << "HELI"
-                        << countHeli;
-
-                //--------------------------------------------------
-                // САМОЛЕТЫ
-                //--------------------------------------------------
-
-                QSqlQuery planesScenario(db);
-
-                planesScenario.exec(
-                            "SELECT * FROM Airplanes");
-
-                while(planesScenario.next())
-                {
-                    int idPlane =
-                            planesScenario.value(0).toInt();
-
-                    QString planeName =
-                            planesScenario.value(1).toString();
-
-                    double vPlane =
-                            planesScenario.value(2).toDouble();
-
-                    double rangePlane =
-                            planesScenario.value(3).toDouble();
-
-                    double capacityPlane =
-                            planesScenario.value(4).toDouble();
-
-                    double sprayWidth =
-                            planesScenario.value(5).toDouble();
-
-
-                    double fuelWeightPlane =
-                            planesScenario.value(6).toDouble();
-
-                    double fuelConsumptionPlane =
-                            planesScenario.value(7).toDouble();
-
-                    double costPlane =
-                            planesScenario.value(8).toDouble();
-
-                    //------------------------------------------
-                    // ограничение по дальности
-                    //------------------------------------------
-
-                    if(rangePlane < 240)
-                    {
-                        qDebug() << "PLANE range fail:"
-                                 << planeName
-                                 << rangePlane;
-
-                        continue;
-                    }
-
-                    //------------------------------------------
-                    // АК
-                    //------------------------------------------
-
-                    double areaAtArrival =
-                            currentArea
-                            +
-                            M_PI *
-                            kSpread *
-                            1000000.0 *
-                            (
-                                scenarioDetect
-                                +
-                                0.5 * scenarioLiquid
-                            );
-
-                    double areaAtArrivalKm2 =
-                            areaAtArrival /
-                            1000000.0;
-
-                    double dispersantVolume =
-                            areaAtArrivalKm2 *
-                            sprayRate *
-                            100.0;
-                    double dispersantMassLocal =
-                            dispersantVolume *
-                            density /
-                            1000.0;
-
-                    double qSpray =
-                            vPlane *
-                            sprayWidth *
-                            sprayRate *
-                            100.0;
-
-                    double tSpray =
-                            areaAtArrival /
-                            qSpray;
-
-
-                    double nFlightsPlane =
-                            ceil(
-                                dispersantMassLocal /
-                                capacityPlane);
-
-                    double tPlaneFlight =
-                            2.0 * distanceBase  /
-                            vPlane;
-
-                    double tPlaneMission =
-                            tPlaneFlight
-                            +
-                            tSpray
-                            +
-                            loadingTime;
-
-                    double countPlane =
-                            ceil(
-                                nFlightsPlane *
-                                tPlaneMission /
-                                scenarioLiquid);
-
-                    qDebug()
-                            << "SCENARIO"
-                            << scenarioTime
-                            << "PLANE"
-                            << countPlane;
-
-
-                    //--------------------------------------------------
-                    // ЗАТРАТЫ ЭКСПЛУАТАЦИИ
-                    //--------------------------------------------------
-/*
-                    double CrUAV =
-                            countUAV *
-                            costUAV *
-                            scenarioDetect;
-
-                    double CrHeli =
-                            countHeli *
-                            costHeli *
-                            0.5 *
-                            scenarioLiquid;
-
-
-                    double CrPlane =
-                            countPlane *
-                            costPlane *
-                            scenarioLiquid;
-
-
-                    double CrUAV =
-                            nFlightsUAV *
-                            costUAV *
-                            tFlightUAV;
-
-                    double CrHeli =
-                        nFlightsHeli *
-                        costHeli *
-                        tHeliMission;
-
-                    double CrPlane =
-                        nFlightsPlane *
-                        costPlane *
-                        tPlaneMission;
-
-                    double CrUAV =
-                            costUAV *
-                            nFlightsUAV *
-                            tFlightMission;
-
-
-                    double CrHeli =
-                            costHeli *
-                            nFlightsHeli *
-                            tHeliMission;
-
-
-                    double CrPlane =
-                        costPlane *
-                        nFlightsPlane *
-                        tPlaneMission;
-
- */
-
-                    double CrUAV =
-                        costUAV *
-                        countUAV ;
-
-                    double CrHeli =
-                        costHeli *
-                        countHeli ;
-
-                    double CrPlane =
-                        costPlane *
-                        countPlane ;
-
-                    double Cr =
-                            CrUAV +
-                            CrHeli +
-                            CrPlane;
-
-                    //--------------------------------------------------
-                    // ЗАТРАТЫ НА ТОПЛИВО
-                    //--------------------------------------------------
-
-                   /* double CfUAV =
-                            countUAV *
-                            fuelConsumptionUAV *
-                            scenarioDetect *
-                            fuelPrice;
-
-                    double CfHeli =
-                            countHeli *
-                            fuelConsumptionHeli *
-                            0.5 *
-                            scenarioLiquid *
-                            fuelPrice;
-
-                    double CfPlane =
-                            countPlane *
-                            fuelConsumptionPlane *
-                            scenarioLiquid *
-                            fuelPrice;
-
-                    double CfUAV =
-                                fuelConsumptionUAV *
-                                nFlightsUAV * tFlightMission *
-                                fuelPrice;
-
-                    double CfHeli =
-                            fuelConsumptionHeli *
-                            nFlightsHeli * tHeliMission *
-                            fuelPrice;
-
-                    double CfPlane =
-                            fuelConsumptionPlane *
-                            nFlightsPlane *
-                            tPlaneMission *
-                            fuelPrice;
-*/
-
-                    double CfUAV =
-                            fuelConsumptionUAV *
-                            countUAV *
-
-                            fuelPrice;
-
-                    double CfHeli =
-                            fuelConsumptionHeli *
-                            countHeli *
-                            fuelPrice;
-
-                    double CfPlane =
-                            fuelConsumptionPlane *
-                            countPlane *
-
-                            fuelPrice;
-
-                    double Cf =
-                            CfUAV +
-                            CfHeli +
-                            CfPlane;
-
-                    double totalUAVCost =
-                            CrUAV +
-                            CfUAV;
-
-                    if(!uavNames.contains(uavName))
-                    {
-                        uavNames.push_back(uavName);
-                        uavCosts.push_back(totalUAVCost);
-                        uavCounts.push_back(countUAV);
-                    }
-
-    /*
-                    uavNames.push_back(
-                                uavName);
-
-                    uavCosts.push_back(
-                                totalUAVCost);
-
-                    uavCounts.push_back(
-                                countUAV);
-    */
-                    if(totalUAVCost < bestUAVCostScenario)
-                    {
-                        bestUAVCostScenario = totalUAVCost;
-
-                        scenarioBestUAV = uavName;
-                        scenarioBestUAVCount = countUAV;
-                    }
-
-                    double totalHeliCost =
-                            CrHeli +
-                            CfHeli;
-
-                    if(!heliNames.contains(heliName))
-                    {
-                        heliNames.push_back(heliName);
-                        heliCosts.push_back(totalHeliCost);
-                        heliCounts.push_back(countHeli);
-                    }
-
-    /*
-                    heliNames.push_back(
-                                heliName);
-
-                    heliCosts.push_back(
-                                totalHeliCost);
-
-                    heliCounts.push_back(
-                                countHeli);
-    */
-                    if(totalHeliCost < bestHeliCostScenario)
-                    {
-                        bestHeliCostScenario = totalHeliCost;
-
-                        scenarioBestHeli = heliName;
-                        scenarioBestHeliCount = countHeli;
-                    }
-
-                    double totalPlaneCost =
-                            CrPlane +
-                            CfPlane;
-
-                    if(!planeNames.contains(planeName))
-                    {
-                        planeNames.push_back(planeName);
-                        planeCosts.push_back(totalPlaneCost);
-                        planeCounts.push_back(countPlane);
-                    }
-
-    /*
-                    planeNames.push_back(
-                                planeName);
-
-                    planeCosts.push_back(
-                                totalPlaneCost);
-
-                    planeCounts.push_back(
-                                countPlane);
-    */
-                    if(totalPlaneCost < bestPlaneCostScenario)
-                    {
-                        bestPlaneCostScenario = totalPlaneCost;
-
-                        scenarioBestPlane = planeName;
-                        scenarioBestPlaneCount = countPlane;
-                    }
-
-                    //--------------------------------------------------
-                    // ЗАТРАТЫ НА МАТЕРИАЛЫ
-                    //--------------------------------------------------
-
-                    double CmDisp =
-                            dispersantMassLocal *
-                            dispersantPrice;
-
-                    double CmBooms =
-                            boomsMass *
-                            boomPrice;
-
-                    double Cm =
-                            CmDisp +
-                            CmBooms;
-
-                    //--------------------------------------------------
-                    // ОБЩИЕ ЗАТРАТЫ
-                    //--------------------------------------------------
-
-                    qDebug()
-                            << "scenarioDetect="
-                            << scenarioDetect
-                            << "scenarioLiquid="
-                            << scenarioLiquid;
-                    qDebug()
-                            << "SCENARIO"
-                            << scenarioTime
-                            << "Cr="
-                            << Cr
-                            << "Cf="
-                            << Cf
-                            << "Cm="
-                            << Cm
-                            << "TOTAL="
-                            << (Cr + Cf + Cm);
-                    double totalCost =
-                            Cr +
-                            Cf +
-                            Cm;
-
-                    if(qFuzzyCompare(scenarioTime, timeLimit))
-                    {
-                        qDebug()
-                                << "=== SAME TIME CHECK ===";
-
-                        qDebug()
-                                << "scenarioTime="
-                                << scenarioTime;
-
-                        qDebug()
-                                << "countUAV="
-                                << countUAV
-                                << "countHeli="
-                                << countHeli
-                                << "countPlane="
-                                << countPlane;
-
-                        qDebug()
-                                << "Cr="
-                                << Cr;
-
-                        qDebug()
-                                << "Cf="
-                                << Cf;
-
-                        qDebug()
-                                << "Cm="
-                                << Cm;
-
-                        qDebug()
-                                << "TOTAL="
-                                << totalCost;
-                    }
-
-
-                    scenarioBestCost =
-                            bestUAVCostScenario
-                            +
-                            bestHeliCostScenario
-                            +
-                            bestPlaneCostScenario
-                            +
-                            Cm;
-
-                    qDebug()
-                            << "BEST PARTS"
-                            << scenarioTime
-                            << bestUAVCostScenario
-                            << bestHeliCostScenario
-                            << bestPlaneCostScenario
-                            << Cm;
-                    qDebug()
-                            << "SCENARIO COST DETAILS"
-                            << scenarioTime
-                            << "CrUAV=" << CrUAV
-                            << "CrHeli=" << CrHeli
-                            << "CrPlane=" << CrPlane
-                            << "CfUAV=" << CfUAV
-                            << "CfHeli=" << CfHeli
-                            << "CfPlane=" << CfPlane
-                            << "CmDisp=" << CmDisp
-                            << "CmBooms=" << CmBooms
-                            << "TOTAL=" << totalCost;
-
-
-                    qDebug()
-                        << "SCENARIO"
-                        << scenarioTime
-                        << uavName
-                        << countUAV
-                        << heliName
-                        << countHeli
-                        << planeName
-                        << countPlane
-                        << totalCost;
-
-
-
-                    if(totalCost < scenarioBestCost)
-                    {
-                        scenarioBestCost =
-                                totalCost;
-
-                        scenarioBestUAV =
-                                uavName;
-
-                        scenarioBestHeli =
-                                heliName;
-
-                        scenarioBestPlane =
-                                planeName;
-
-                        scenarioBestUAVCount =
-                                countUAV;
-
-                        scenarioBestHeliCount =
-                                countHeli;
-
-                        scenarioBestPlaneCount =
-                                countPlane;
-                    }
-
-
-                    qDebug()
-                            << "RISK COST"
-                            << scenarioTime
-                            << scenarioBestCost;
-
-        }}}
-
-        if(scenarioRisk > 100)
-            scenarioRisk = 100;
-
-        if(scenarioRisk < 0)
-            scenarioRisk = 0;
-
-        QString level;
-        QString color;
-        if(scenarioRisk <= 25)
-        {
-            level = "Низкий";
-            color = "#00ff00";
-        }
-        else if(scenarioRisk <= 35)
-        {
-            level = "Средний";
-            color = "#ffff00";
-        }
-        else if(scenarioRisk <= 60)
-        {
-            level = "Высокий";
-            color = "#ff8800";
-        }
-        else
-        {
-            level = "Критический";
-            color = "#ff0000";
-        }
-
-        double timeFactor =
-                timeLimit /
-                scenarioTime;
-
-        double scenarioCost =
-                bestCost *
-                timeFactor;
-
-                RiskScenario s;
-
-        s.cost =
-                scenarioBestCost;
-
-
-
-        s.uav =
-                scenarioBestUAV;
-
-        s.heli =
-                scenarioBestHeli;
-
-        s.plane =
-                scenarioBestPlane;
-
-        s.uavCount =
-                scenarioBestUAVCount;
-
-        s.heliCount =
-                scenarioBestHeliCount;
-
-        s.planeCount =
-                scenarioBestPlaneCount;
-
-
-
-        s.level = level;
-        s.color = color;
-
-        s.risk = scenarioRisk;
-        s.time = scenarioTime;
-
-       // s.cost = bestCost;
-        riskCosts.push_back(
-                    scenarioBestCost / 1000000.0);
-
-        riskColors.push_back(
-                    color);
-        scenarios.push_back(s);
-        qDebug()
-            << "BEST PARTS"
-            << scenarioTime
-            << scenarioBestCost;
-        qDebug()
-                << scenarioBestUAV
-                << scenarioBestUAVCount
-                << scenarioBestHeli
-                << scenarioBestHeliCount
-                << scenarioBestPlane
-                << scenarioBestPlaneCount
-                << scenarioBestCost;
+                ;
     };
 
 
@@ -3008,7 +3016,7 @@ void OilSpillWindow::calculateOperation()
                     s.risk,
                     'f',
                     1)
-                + "%";
+                ;
 
         riskHtml +=
                 "<br><br>";
@@ -3224,6 +3232,7 @@ void OilSpillWindow::createCharts()
     {
         *uavSet << uavCosts[i] / 1000000.0;
     }
+
 
     uavSet->setColor(
                 QColor(35, 182, 175));
@@ -3475,6 +3484,7 @@ void OilSpillWindow::createCharts()
             graphCosts[i]);
     }
 
+
     /*
     series->append(
             0,
@@ -3555,10 +3565,14 @@ void OilSpillWindow::createCharts()
         cost->addSeries(riskPoint);
     }
 
+
+
+
+
+
+
     //отдельная легенда для графика
     cost->legend()->hide();
-
-
 
     // Убираем внутренние отступы, чтобы график был вплотную к осям
     cost->layout()->setContentsMargins(0, 0, 0, 0);
@@ -3712,7 +3726,22 @@ void OilSpillWindow::createCharts()
     txt += "Операция выполнена за: "
     + QString::number(bestOperationTime, 'f', 1)
     + " ч<br>";
-
+/*
+    txt +=
+            "доля времени на обнаружение (ε): "
+            + QString::number(
+                bestEpsilon,
+                'f',
+                1)
+            + "\n<br>";
+    txt +=
+            "доля времени на ликвидацию с ВК (β)= "
+            + QString::number(
+                bestBeta,
+                'f',
+                1)
+            + "\n<br>";
+*/
     txt += "<b>Рациональный парк</b><br>";
 
     txt += "БПЛА: "
@@ -3746,7 +3775,7 @@ void OilSpillWindow::createCharts()
                 bestPlaneCost / 1000000.0,
                 'f',
                 2)
-           + " млн руб.<br><br>";
+           + " млн руб.<br>";
 
     txt += "<b>Затраты</b><br>";
 
@@ -3771,7 +3800,7 @@ void OilSpillWindow::createCharts()
                 2)
            + " млн руб.<br>";
 
-    txt += "<br>";
+  //  txt += "<br>";
 
     txt +=
             "Экологический риск: ";
@@ -3788,9 +3817,9 @@ void OilSpillWindow::createCharts()
                 riskValue,
                 'f',
                 1)
-            + "%)";
+            + ")";
 
-    txt += "<br><br><b>Итого: "
+    txt += "<br><b>Итого: "
            + QString::number(
                 bestCost / 1000000.0,
                 'f',

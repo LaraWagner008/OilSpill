@@ -66,6 +66,8 @@ private:
     //----------------------------------
     QVector<double> graphTimes;
     QVector<double> graphCosts;
+    QVector<double> graphEpsilons;
+    QVector<double> graphBetas;
 
     QVector<int> graphUAVCounts;
     QVector<int> graphHeliCounts;
@@ -73,6 +75,8 @@ private:
     QVector<QString> graphUAVNames;
     QVector<QString> graphHeliNames;
     QVector<QString> graphPlaneNames;
+    QVector<double> riskTimes;
+    QVector<double> riskValues;
 
     QVector<double> graphOperationTimes;
 
@@ -224,6 +228,11 @@ private:
     int bestUAVCount;
     int bestHeliCount;
     int bestPlaneCount;
+
+    double bestEpsilon = 0.0;
+    double bestBeta = 0.0;
+
+
 
     double bestCost;
 
