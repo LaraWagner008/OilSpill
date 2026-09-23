@@ -1,4 +1,5 @@
 QT += core gui widgets charts sql
+
 RESOURCES += resources.qrc
 
 CONFIG += c++11
@@ -6,11 +7,13 @@ CONFIG += c++11
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    oilspillwindow.cpp
+    oilspillwindow.cpp \
+    database/databasemanager.cpp
 
 HEADERS += \
     mainwindow.h \
-    oilspillwindow.h
+    oilspillwindow.h \
+    database/databasemanager.h
 
 TARGET = OilSpillSystem
 

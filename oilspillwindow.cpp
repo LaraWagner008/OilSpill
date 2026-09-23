@@ -46,7 +46,8 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     this->timeLimit = timeLimit;
     this->oilVolume = oilVolume;
     bestCost = 1e18;
-    connectDatabase();
+    // ЮЫЛО connectDatabase();
+    databaseManager.connect(); //СТАЛО
 
     loadConditions();
     bestUAVCount = 0;
@@ -828,36 +829,11 @@ void OilSpillWindow::paintEvent(QPaintEvent *event)
 // SQLITE
 //=====================================================
 
-void OilSpillWindow::connectDatabase()
-{
-    if(QSqlDatabase::contains("oil_connection"))
-    {
-        db =
-                QSqlDatabase::database(
-                    "oil_connection");
-    }
-    else
-    {
-        db =
-                QSqlDatabase::addDatabase(
-                    "QSQLITE",
-                    "oil_connection");
 
-        db.setDatabaseName(
-                    "D:/OilProject/OilSpillSystem/database.db");
-    }
-
-    if(!db.open())
-    {
-        qDebug()
-                << db.lastError().text();
-    }
-
-}
 
 void OilSpillWindow::loadConditions()
 {
-    if(!db.isOpen())
+    if(!databaseManager.database().isOpen())
         return;
 
     int waterId = 1;
@@ -869,7 +845,7 @@ void OilSpillWindow::loadConditions()
         waterId = 3;
 
 
-    QSqlQuery q(db);
+    QSqlQuery q(databaseManager.database());
 /*
     q.prepare(
         "SELECT * "
@@ -1044,7 +1020,7 @@ void OilSpillWindow::calculateOperation()
             0.7 * timeLimit;
 
 */
-    if(!db.isOpen())
+    if(!databaseManager.database().isOpen())
         return;
 
     searchArea =
@@ -1054,7 +1030,7 @@ void OilSpillWindow::calculateOperation()
     // Константы
     //--------------------------------------------------
 
-    QSqlQuery c(db);
+    QSqlQuery c(databaseManager.database());
 
     c.exec("SELECT * FROM ConstData");
     qDebug() << "ConstData exec =" << c.lastError().text();
@@ -1124,7 +1100,7 @@ void OilSpillWindow::calculateOperation()
     // перебор всех вариантов
     //--------------------------------------------------
 
-    QSqlQuery uavs(db);
+    QSqlQuery uavs(databaseManager.database());
 
 /*
     uavNames.clear();
@@ -1391,7 +1367,7 @@ void OilSpillWindow::calculateOperation()
         // ВЕРТОЛЕТЫ
         //--------------------------------------------------
 
-        QSqlQuery helis(db);
+        QSqlQuery helis(databaseManager.database());
 
         helis.exec(
                     "SELECT * FROM Helicopters");
@@ -1478,7 +1454,7 @@ void OilSpillWindow::calculateOperation()
             // САМОЛЕТЫ
             //--------------------------------------------------
 
-            QSqlQuery planes(db);
+            QSqlQuery planes(databaseManager.database());
 
             planes.exec(
                         "SELECT * FROM Airplanes");
@@ -2274,7 +2250,7 @@ void OilSpillWindow::calculateOperation()
         }
     }
 
-    QSqlQuery uavsChart(db);
+    QSqlQuery uavsChart(databaseManager.database());
 
     uavsChart.exec("SELECT * FROM UAVs");
 
@@ -2441,7 +2417,7 @@ void OilSpillWindow::calculateOperation()
         uavCounts.push_back(countUAV);
     }
 
-    QSqlQuery helisChart(db);
+    QSqlQuery helisChart(databaseManager.database());
 
     helisChart.exec("SELECT * FROM Helicopters");
 
@@ -2537,7 +2513,7 @@ void OilSpillWindow::calculateOperation()
         heliCounts.push_back(countHeli);
     }
 
-    QSqlQuery planesChart(db);
+    QSqlQuery planesChart(databaseManager.database());
 
     planesChart.exec("SELECT * FROM Airplanes");
 
@@ -3101,8 +3077,8 @@ void OilSpillWindow::calculateOperation()
     // СОХРАНЕНИЕ В RESULT
     //--------------------------------------------------
 
-    QSqlQuery save(db);
-    QSqlQuery clear(db);
+    QSqlQuery save(databaseManager.database());
+    QSqlQuery clear(databaseManager.database());
     clear.exec("DELETE FROM Result");
     save.prepare(
 
@@ -3152,7 +3128,7 @@ void OilSpillWindow::calculateOperation()
 
     save.exec();
 
-    QSqlQuery q(db);
+    QSqlQuery q(databaseManager.database());
 
     q.exec("SELECT * FROM Result LIMIT 1");
 

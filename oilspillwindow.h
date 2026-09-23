@@ -11,6 +11,8 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 
+#include "database/databasemanager.h"
+
 QT_CHARTS_USE_NAMESPACE
 
 struct OilParticle
@@ -91,7 +93,7 @@ private:
     // БД
     //----------------------------------
 
-    void connectDatabase();
+    //void connectDatabase();
     void loadConditions();
     void calculateOperation();
 
@@ -142,7 +144,9 @@ private:
     // БД
     //----------------------------------
 
-    QSqlDatabase db;
+
+    // БЫЛО QSqlDatabase db;
+    DatabaseManager databaseManager; //СТАЛО
 
     //----------------------------------
     // входные данные
