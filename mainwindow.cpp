@@ -259,70 +259,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     left->addStretch();
 
-    // =====================================================
-    // RIGHT PANEL
-    // =====================================================
-/*
-    QFrame *rightPanel = new QFrame();
-
-    rightPanel->setStyleSheet(
-
-                "background-color: rgba(6,12,24,210);"
-                "border: 1px solid rgba(0,255,255,80);"
-                "border-radius: 22px;"
-
-                );
-
-    QVBoxLayout *right =
-            new QVBoxLayout(rightPanel);
-
-    right->setContentsMargins(28,28,28,28);
-
-    QLabel *systemTitle =
-            new QLabel("СТАТУС СИСТЕМЫ");
-
-    systemTitle->setStyleSheet(
-
-                "font-size: 26px;"
-                "font-weight: bold;"
-                "color: rgb(0,255,255);"
-
-                );
-
-    right->addWidget(systemTitle);
-
-    right->addSpacing(25);
-
-    QLabel *info =
-            new QLabel(
-
-                "• Моделирование дрейфа нефтяного пятна\n\n"
-
-                "• Поддержка принятия решений\n\n"
-
-                "• Анализ эффективности авиационных группировок\n\n"
-
-                "• Визуализация распространения нефти\n\n"
-
-                "• Подготовка к алгоритмам обнаружения и ликвидации\n\n"
-
-                "• Тактический мониторинг акватории"
-
-                );
-
-    info->setStyleSheet(
-
-                "font-size: 17px;"
-                "color: rgb(120,220,255);"
-                "line-height: 28px;"
-                );
-
-    right->addWidget(info);
-
-    right->addStretch();
-*/
     root->addWidget(leftPanel);
-    //root->addWidget(rightPanel);
 
     connect(startButton,
             &QPushButton::clicked,
