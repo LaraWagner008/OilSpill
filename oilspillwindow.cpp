@@ -1238,96 +1238,50 @@ void OilSpillWindow::calculateOperation()
                 vUAV *
                 stripWidth;*/
 
+        UAVCalculationResult uavResult =
+                uavCalculator.calculate(
+                    environment.driftVelocity,
+                    tDetect,
+                    flightHeight,
+                    viewingAngle,
+                    rangeUAV,
+                    environment.distanceBase,
+                    vUAV,
+                    fuelWeightUAV,
+                    fuelConsumptionUAV);
 
         double tFlightUAV =
-                fuelWeightUAV /
-                fuelConsumptionUAV;
+                uavResult.flightTime;
 
         double searchRadius =
-                environment.driftVelocity *
-                tDetect;
+                uavResult.searchRadius;
 
         double stripWidth =
-                2.0 *
-                flightHeight *
-                tan(
-                    degToRad(
-                        viewingAngle / 2.0));
+                uavResult.stripWidth;
 
         double thetaSpiral =
-                (2.0 * M_PI * searchRadius)
-                /
-                stripWidth;
+                uavResult.thetaSpiral;
 
         double totalSearchLength =
-                (stripWidth /
-                 (4.0 * M_PI))
-                *
-                (
-                    thetaSpiral *
-                    sqrt(
-                        1.0 +
-                        thetaSpiral *
-                        thetaSpiral)
-                    +
-                    log(
-                        thetaSpiral +
-                        sqrt(
-                            1.0 +
-                            thetaSpiral *
-                            thetaSpiral))
-                );
+                uavResult.totalSearchLength;
 
         double searchLengthOneUAV =
-                rangeUAV
-                -
-                2.0 *
-                environment.distanceBase;
-
-        double searchAreaKm2 =
-                operationResult.searchArea / 1000000.0;
-
+                uavResult.searchLengthOneUAV;
 
         double nFlightsUAV =
-                ceil(
-                    totalSearchLength
-                    /
-                    searchLengthOneUAV);
-
-
-       /* double nFlightsUAV =
-                searchArea /
-                (qUAV * tFlightUAV);
-        double tFlightMission =
-                2.0*distanceBase /vUAV +
-                searchArea/qUAV;*/
-
+                uavResult.flightsCount;
 
         double tFlightMission =
-                (
-                    searchLengthOneUAV
-                    +
-                    2.0 *
-                    environment.distanceBase
-                )
-                /
-                vUAV;
-
-
-
+                uavResult.flightMissionTime;
 
         double countUAV =
-                ceil(
-                    nFlightsUAV *
-                    tFlightMission /
-                    tDetect);
+                uavResult.uavCount;
 
         double nFlightsPerUAV =
-        ceil(nFlightsUAV / countUAV);
+                uavResult.flightsPerUAV;
 
         int tRealUAV =
-        nFlightsPerUAV *
-        tFlightMission;
+                uavResult.realUAVTime;
 
         qDebug()
         << "ТУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУТ"
