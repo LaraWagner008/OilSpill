@@ -14,6 +14,7 @@
 #include "database/databasemanager.h"
 #include "models/environmentdata.h"
 #include "models/aircraftdata.h"
+#include "models/operationresult.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -194,58 +195,8 @@ private:
     //----------------------------------
     AircraftData aircraft;
 
-    QString bestUAV;
-    QString bestHeli;
-    QString bestPlane;
+    OperationResult operationResult;
 
-    double bestUAVCost;
-    double bestHeliCost;
-    double bestPlaneCost;
-
-    double bestUAVOperationCost;
-    double bestHeliOperationCost;
-    double bestPlaneOperationCost;
-
-    double bestUAVFuelCost;
-    double bestHeliFuelCost;
-    double bestPlaneFuelCost;
-
-    int bestUAVCount;
-    int bestHeliCount;
-    int bestPlaneCount;
-
-    double bestEpsilon = 0.0;
-    double bestBeta = 0.0;
-
-
-
-    double bestCost;
-
-    //----------------------------------
-    // части затрат
-    //----------------------------------
-
-    double operationCost;
-    double fuelCost;
-    double materialCost;
-
-    double riskValue;
-    QString riskLevel;
-    QString riskColor;
-
-    // данные лучшей комбинации
-
-    int bestUAVId;
-    int bestHeliId;
-    int bestPlaneId;
-
-    double bestOperationTime;
-
-    double searchArea;
-
-    double oilMass;
-    double dispersantMass;
-    double boomsMass;
     QVector<OilParticle> particles;
 };
 

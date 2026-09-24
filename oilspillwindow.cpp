@@ -45,30 +45,30 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     this->waterType = waterType;
     this->timeLimit = timeLimit;
     this->oilVolume = oilVolume;
-    bestCost = 1e18;
+    operationResult.bestCost = 1e18;
     // ЮЫЛО connectDatabase();
     databaseManager.connect(); //СТАЛО
 
     loadConditions();
-    bestUAVCount = 0;
-    bestHeliCount = 0;
-    bestPlaneCount = 0;
+    operationResult.bestUAVCount = 0;
+    operationResult.bestHeliCount = 0;
+    operationResult.bestPlaneCount = 0;
 
-    bestUAVId = -1;
-    bestHeliId = -1;
-    bestPlaneId = -1;
+    operationResult.bestUAVId = -1;
+    operationResult.bestHeliId = -1;
+    operationResult.bestPlaneId = -1;
 
-    bestUAVOperationCost = 0;
-    bestHeliOperationCost = 0;
-    bestPlaneOperationCost = 0;
+    operationResult.bestUAVOperationCost = 0;
+    operationResult.bestHeliOperationCost = 0;
+    operationResult.bestPlaneOperationCost = 0;
 
-    bestUAVFuelCost = 0;
-    bestHeliFuelCost = 0;
-    bestPlaneFuelCost = 0;
+    operationResult.bestUAVFuelCost = 0;
+    operationResult.bestHeliFuelCost = 0;
+    operationResult.bestPlaneFuelCost = 0;
 
-    operationCost = 0;
-    fuelCost = 0;
-    materialCost = 0;
+    operationResult.operationCost = 0;
+    operationResult.fuelCost = 0;
+    operationResult.materialCost = 0;
 
     setRenderHint(QPainter::Antialiasing);
     setRenderHint(QPainter::SmoothPixmapTransform);
@@ -164,11 +164,11 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     cameraY = 0;
 
     spreadingFinished = false;
-    bestCost = 1e100;
+    operationResult.bestCost = 1e100;
 
-    bestUAVCost = 1e100;
-    bestHeliCost = 1e100;
-    bestPlaneCost = 1e100;
+    operationResult.bestUAVCost = 1e100;
+    operationResult.bestHeliCost = 1e100;
+    operationResult.bestPlaneCost = 1e100;
     // =====================================================
     // PARTICLES
     // =====================================================
@@ -273,7 +273,7 @@ OilSpillWindow::OilSpillWindow(QString waterType,
             &OilSpillWindow::updateSimulation);
 
     timer->start(33);
-    bestCost = 1e30;
+    operationResult.bestCost = 1e30;
 
     calculateOperation();
 
@@ -1031,7 +1031,7 @@ void OilSpillWindow::calculateOperation()
     if(!databaseManager.database().isOpen())
         return;
 
-    searchArea =
+    operationResult.searchArea =
             calculateSearchArea();
 
     //--------------------------------------------------
@@ -1084,11 +1084,11 @@ void OilSpillWindow::calculateOperation()
     // масса нефти
     //--------------------------------------------------
 
-    oilMass =
+    operationResult.oilMass =
             oilVolume *
             density;
 
-    boomsMass =
+    operationResult.boomsMass =
             perimeter / 1000.0 *
             weightBooms;
 
@@ -1123,7 +1123,7 @@ void OilSpillWindow::calculateOperation()
     planeCosts.clear();
     planeCounts.clear();
 */
-    bestCost = 1e100;
+    operationResult.bestCost = 1e100;
 
 /*
     QString bestUAV;
@@ -1285,7 +1285,7 @@ void OilSpillWindow::calculateOperation()
                 environment.distanceBase;
 
         double searchAreaKm2 =
-                searchArea / 1000000.0;
+                operationResult.searchArea / 1000000.0;
 
 
         double nFlightsUAV =
@@ -1427,7 +1427,7 @@ void OilSpillWindow::calculateOperation()
 
             double nFlightsHeli =
                     ceil(
-                        boomsMass /
+                        operationResult.boomsMass /
                         capacityHeli);
 
             double tBooms =
@@ -1800,24 +1800,24 @@ void OilSpillWindow::calculateOperation()
 
 
 
-                if(totalUAVCost < bestUAVCost)
+                if(totalUAVCost < operationResult.bestUAVCost)
                 {
-                    bestUAVCost =
+                    operationResult.bestUAVCost =
                             totalUAVCost;
 
-                    bestUAV =
+                    operationResult.bestUAV =
                             uavName;
 
-                    bestUAVCount =
+                    operationResult.bestUAVCount =
                             countUAV;
 
-                    bestUAVId =
+                    operationResult.bestUAVId =
                             idUAV;
 
-                    bestUAVOperationCost =
+                    operationResult.bestUAVOperationCost =
                             CrUAV;
 
-                    bestUAVFuelCost =
+                    operationResult.bestUAVFuelCost =
                             CfUAV;
                 }
 
@@ -1844,24 +1844,24 @@ void OilSpillWindow::calculateOperation()
                 heliCounts.push_back(
                             countHeli);
 */
-                if(totalHeliCost < bestHeliCost)
+                if(totalHeliCost < operationResult.bestHeliCost)
                 {
-                    bestHeliCost =
+                    operationResult.bestHeliCost =
                             totalHeliCost;
 
-                    bestHeli =
+                    operationResult.bestHeli =
                             heliName;
 
-                    bestHeliCount =
+                    operationResult.bestHeliCount =
                             countHeli;
 
-                    bestHeliId =
+                    operationResult.bestHeliId =
                             idHeli;
 
-                    bestHeliOperationCost =
+                    operationResult.bestHeliOperationCost =
                             CrHeli;
 
-                    bestHeliFuelCost =
+                    operationResult.bestHeliFuelCost =
                             CfHeli;
                 }
 
@@ -1888,27 +1888,27 @@ void OilSpillWindow::calculateOperation()
                 planeCounts.push_back(
                             countPlane);
 */
-                if(totalPlaneCost < bestPlaneCost)
+                if(totalPlaneCost < operationResult.bestPlaneCost)
                 {
-                    bestPlaneCost =
+                    operationResult.bestPlaneCost =
                             totalPlaneCost;
 
-                    bestPlane =
+                    operationResult.bestPlane =
                             planeName;
 
-                    bestPlaneCount =
+                    operationResult.bestPlaneCount =
                             countPlane;
 
-                    bestPlaneId =
+                    operationResult.bestPlaneId =
                             idPlane;
 
-                    dispersantMass =
+                    operationResult.dispersantMass =
                             dispersantMassLocal;
 
-                    bestPlaneOperationCost =
+                    operationResult.bestPlaneOperationCost =
                             CrPlane;
 
-                    bestPlaneFuelCost =
+                    operationResult.bestPlaneFuelCost =
                             CfPlane;
                 }
 
@@ -1921,7 +1921,7 @@ void OilSpillWindow::calculateOperation()
                         dispersantPrice;
 
                 double CmBooms =
-                        boomsMass *
+                        operationResult.boomsMass *
                         boomPrice;
 
                 double Cm =
@@ -2184,34 +2184,34 @@ void OilSpillWindow::calculateOperation()
 
     if(bestIndex >= 0)
     {
-        bestCost =
+        operationResult.bestCost =
                 graphCosts[bestIndex] * 1000000.0;
 
-        bestOperationTime =
+        operationResult.bestOperationTime =
                 graphOperationTimes[bestIndex];
 
-        bestUAVCount =
+        operationResult.bestUAVCount =
                 graphUAVCounts[bestIndex];
 
-        bestHeliCount =
+        operationResult.bestHeliCount =
                 graphHeliCounts[bestIndex];
 
-        bestPlaneCount =
+        operationResult.bestPlaneCount =
                 graphPlaneCounts[bestIndex];
 
-        bestUAV =
+        operationResult.bestUAV =
                 graphUAVNames[bestIndex];
 
-        bestHeli =
+        operationResult.bestHeli =
                 graphHeliNames[bestIndex];
 
-        bestPlane =
+        operationResult.bestPlane =
                 graphPlaneNames[bestIndex];
 
-        bestEpsilon =
+        operationResult.bestEpsilon =
                 graphEpsilons[bestIndex];
 
-        bestBeta =
+        operationResult.bestBeta =
                 graphBetas[bestIndex];
     }
 
@@ -2243,16 +2243,16 @@ void OilSpillWindow::calculateOperation()
 */
 
     double tDetectBest =
-            bestEpsilon * bestOperationTime;
+            operationResult.bestEpsilon * operationResult.bestOperationTime;
 
     double tLiquidBest =
-            (1-bestEpsilon) * bestOperationTime;
+            (1-operationResult.bestEpsilon) * operationResult.bestOperationTime;
 
     for(int i = 0; i < graphOperationTimes.size(); i++)
     {
         if(qFuzzyCompare(
                 graphOperationTimes[i] + 1.0,
-                bestOperationTime + 1.0))
+                operationResult.bestOperationTime + 1.0))
         {
             continue;
         }
@@ -2451,7 +2451,7 @@ void OilSpillWindow::calculateOperation()
 
         double nFlightsHeli =
                 ceil(
-                    boomsMass /
+                    operationResult.boomsMass /
                     capacityHeli);
 
         double tBooms =
@@ -2471,7 +2471,7 @@ void OilSpillWindow::calculateOperation()
                 ceil(
                     nFlightsHeli *
                     tHeliMission /
-                    (bestBeta * tLiquidBest));
+                    (operationResult.bestBeta * tLiquidBest));
 
         double nFlightsPerHeli =
         ceil(nFlightsHeli / countHeli);
@@ -2555,7 +2555,7 @@ void OilSpillWindow::calculateOperation()
                 1000000.0 *
                 (
                     tDetectBest +
-                    bestBeta * tLiquidBest
+                    operationResult.bestBeta * tLiquidBest
                 );
 
         double dispersantVolume =
@@ -2698,36 +2698,36 @@ void OilSpillWindow::calculateOperation()
 
     qDebug()
             << "MAIN COST"
-            << bestCost;
+            << operationResult.bestCost;
 
 
-    operationCost =
-            bestUAVOperationCost
+    operationResult.operationCost =
+            operationResult.bestUAVOperationCost
             +
-            bestHeliOperationCost
+            operationResult.bestHeliOperationCost
             +
-            bestPlaneOperationCost;
+            operationResult.bestPlaneOperationCost;
 
-    fuelCost =
-            bestUAVFuelCost
+    operationResult.fuelCost =
+            operationResult.bestUAVFuelCost
             +
-            bestHeliFuelCost
+            operationResult.bestHeliFuelCost
             +
-            bestPlaneFuelCost;
+            operationResult.bestPlaneFuelCost;
 
-    materialCost =
-            dispersantMass *
+    operationResult.materialCost =
+            operationResult.dispersantMass *
             dispersantPrice
             +
-            boomsMass *
+            operationResult.boomsMass *
             boomPrice;
 
-    bestCost =
-            operationCost
+    operationResult.bestCost =
+            operationResult.operationCost
             +
-            fuelCost
+            operationResult.fuelCost
             +
-            materialCost;
+            operationResult.materialCost;
 
 /*
    bestOperationTime =
@@ -2758,7 +2758,7 @@ void OilSpillWindow::calculateOperation()
     if(shoreFactor > 1.0)
         shoreFactor = 1.0;
 
-    riskValue =
+    operationResult.riskValue =
             (oilVolume / 1000.0)
             *
             shoreFactor
@@ -2768,31 +2768,31 @@ void OilSpillWindow::calculateOperation()
             environment.vulnerabilityCoefficient
            ;
 
-    if(riskValue > 1)
-        riskValue = 1;
+    if(operationResult.riskValue > 1)
+        operationResult.riskValue = 1;
 
-    if(riskValue < 0)
-        riskValue = 0;
+    if(operationResult.riskValue < 0)
+        operationResult.riskValue = 0;
 
-    if(riskValue <= 0.25)
+    if(operationResult.riskValue <= 0.25)
     {
-        riskLevel = "Низкий";
-        riskColor = "#00ff55";
+        operationResult.riskLevel = "Низкий";
+        operationResult.riskColor = "#00ff55";
     }
-    else if(riskValue <= 0.35)
+    else if(operationResult.riskValue <= 0.35)
     {
-        riskLevel = "Средний";
-        riskColor = "#ffff00";
+        operationResult.riskLevel = "Средний";
+        operationResult.riskColor = "#ffff00";
     }
-    else if(riskValue <= 0.6)
+    else if(operationResult.riskValue <= 0.6)
     {
-        riskLevel = "Высокий";
-        riskColor = "#ff8800";
+        operationResult.riskLevel = "Высокий";
+        operationResult.riskColor = "#ff8800";
     }
     else
     {
-        riskLevel = "Критический";
-        riskColor = "#ff0000";
+        operationResult.riskLevel = "Критический";
+        operationResult.riskColor = "#ff0000";
     }
 
     //Risk for all scenarios
@@ -2827,7 +2827,7 @@ void OilSpillWindow::calculateOperation()
     for(double fraction : scenarioFractions)
     {
         double targetTime =
-                bestOperationTime * fraction;
+                operationResult.bestOperationTime * fraction;
 
         int bestScenarioIndex = 0;
 
@@ -2906,10 +2906,10 @@ void OilSpillWindow::calculateOperation()
                 scenarioTimes[i];
 
         double scenarioDetect =
-                bestEpsilon * scenarioTime;
+                operationResult.bestEpsilon * scenarioTime;
 
         double scenarioLiquid =
-                (1-bestEpsilon) * scenarioTime;
+                (1-operationResult.bestEpsilon) * scenarioTime;
 
         double scenarioBestCost =
                 1e100;
@@ -3122,17 +3122,17 @@ void OilSpillWindow::calculateOperation()
     save.addBindValue(oilVolume);
     save.addBindValue(timeLimit);
 
-    save.addBindValue(bestUAVId);
-    save.addBindValue(bestHeliId);
-    save.addBindValue(bestPlaneId);
+    save.addBindValue(operationResult.bestUAVId);
+    save.addBindValue(operationResult.bestHeliId);
+    save.addBindValue(operationResult.bestPlaneId);
 
-    save.addBindValue(bestUAVCount);
-    save.addBindValue(bestHeliCount);
-    save.addBindValue(bestPlaneCount);
+    save.addBindValue(operationResult.bestUAVCount);
+    save.addBindValue(operationResult.bestHeliCount);
+    save.addBindValue(operationResult.bestPlaneCount);
 
-    save.addBindValue(bestCost);
+    save.addBindValue(operationResult.bestCost);
 
-    save.addBindValue(riskValue);
+    save.addBindValue(operationResult.riskValue);
 
     save.exec();
 
@@ -3456,7 +3456,7 @@ void OilSpillWindow::createCharts()
             new QLineSeries();
 
     double costMln =
-            bestCost / 1000000.0; // для графика в млн руб а не просто руб
+            operationResult.bestCost / 1000000.0; // для графика в млн руб а не просто руб
 
 
 
@@ -3571,7 +3571,7 @@ void OilSpillWindow::createCharts()
 
     axisX->setRange(
                 0,
-                bestOperationTime * 1.1);
+                operationResult.bestOperationTime * 1.1);
 
 
 
@@ -3708,7 +3708,7 @@ void OilSpillWindow::createCharts()
            + " м³<br>";
 
     txt += "Операция выполнена за: "
-    + QString::number(bestOperationTime, 'f', 1)
+    + QString::number(operationResult.bestOperationTime, 'f', 1)
     + " ч<br>";
 /*
     txt +=
@@ -3729,34 +3729,34 @@ void OilSpillWindow::createCharts()
     txt += "<b>Рациональный парк</b><br>";
 
     txt += "БПЛА: "
-           + bestUAV
+           + operationResult.bestUAV
            + " ("
-           + QString::number(bestUAVCount)
+           + QString::number(operationResult.bestUAVCount)
            + ") — "
            + QString::number(
-                bestUAVCost / 1000000.0,
+                operationResult.bestUAVCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
 
     txt += "ВК: "
-           + bestHeli
+           + operationResult.bestHeli
            + " ("
-           + QString::number(bestHeliCount)
+           + QString::number(operationResult.bestHeliCount)
            + ") — "
            + QString::number(
-                bestHeliCost / 1000000.0,
+                operationResult.bestHeliCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
 
     txt += "АК: "
-           + bestPlane
+           + operationResult.bestPlane
            + " ("
-           + QString::number(bestPlaneCount)
+           + QString::number(operationResult.bestPlaneCount)
            + ") — "
            + QString::number(
-                bestPlaneCost / 1000000.0,
+                operationResult.bestPlaneCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
@@ -3765,21 +3765,21 @@ void OilSpillWindow::createCharts()
 
     txt += "Эксплуатация: "
            + QString::number(
-                operationCost / 1000000.0,
+                operationResult.operationCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
 
     txt += "Топливо: "
            + QString::number(
-                fuelCost / 1000000.0,
+                operationResult.fuelCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
 
     txt += "Материалы: "
            + QString::number(
-                materialCost / 1000000.0,
+                operationResult.materialCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
@@ -3791,21 +3791,21 @@ void OilSpillWindow::createCharts()
 
     txt +=
             "<span style='color:"
-            + riskColor
+            + operationResult.riskColor
             + ";'>●</span> ";
 
     txt +=
-            riskLevel
+            operationResult.riskLevel
             + " ("
             + QString::number(
-                riskValue,
+                operationResult.riskValue,
                 'f',
                 1)
             + ")";
 
     txt += "<br><b>Итого: "
            + QString::number(
-                bestCost / 1000000.0,
+                operationResult.bestCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.</b>";
