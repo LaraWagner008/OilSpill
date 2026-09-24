@@ -1248,7 +1248,9 @@ void OilSpillWindow::calculateOperation()
                     environment.distanceBase,
                     vUAV,
                     fuelWeightUAV,
-                    fuelConsumptionUAV);
+                    fuelConsumptionUAV,
+                    costUAV,
+                    fuelPriceUAV);
 
         double tFlightUAV =
                 uavResult.flightTime;
@@ -1615,7 +1617,7 @@ void OilSpillWindow::calculateOperation()
                     tPlaneMission;*/
 
                 double CrUAV =
-                    countUAV * tRealUAV * costUAV;
+                        uavResult.operationCost;
                 double CrHeli =
                     countHeli * tRealHeli * costHeli;
                 double CrPlane =
@@ -1708,10 +1710,7 @@ void OilSpillWindow::calculateOperation()
                     fuelPrice;*/
 
                 double CfUAV =
-                    countUAV *
-                    tRealUAV *
-                    fuelConsumptionUAV *
-                    fuelPriceUAV;
+                        uavResult.fuelCost;
                 double CfHeli =
                         countHeli *
                         tRealHeli *
@@ -1730,8 +1729,7 @@ void OilSpillWindow::calculateOperation()
                         CfPlane;
 
                 double totalUAVCost =
-                        CrUAV +
-                        CfUAV;
+                        uavResult.totalCost;
 /*
                 if(!uavNames.contains(uavName))
                 {

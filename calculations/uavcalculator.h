@@ -17,6 +17,10 @@ struct UAVCalculationResult
     double uavCount = 0.0;
     double flightsPerUAV = 0.0;
     int realUAVTime = 0;
+
+    double operationCost = 0.0;
+    double fuelCost = 0.0;
+    double totalCost = 0.0;
 };
 
 class UAVCalculator
@@ -33,7 +37,9 @@ public:
             double distanceBase,
             double vUAV,
             double fuelWeightUAV,
-            double fuelConsumptionUAV);
+            double fuelConsumptionUAV,
+            double costUAV,
+            double fuelPriceUAV);
 };
 
 #endif // UAVCALCULATOR_H

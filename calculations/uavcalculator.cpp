@@ -16,7 +16,9 @@ UAVCalculationResult UAVCalculator::calculate(
         double distanceBase,
         double vUAV,
         double fuelWeightUAV,
-        double fuelConsumptionUAV)
+        double fuelConsumptionUAV,
+        double costUAV,
+        double fuelPriceUAV)
 {
     UAVCalculationResult result;
 
@@ -65,6 +67,11 @@ UAVCalculationResult UAVCalculator::calculate(
             2.0 *
             distanceBase;
 
+    if(result.searchLengthOneUAV <= 0.0)
+    {
+        return result;
+    }
+
     result.flightsCount =
             ceil(
                 result.totalSearchLength
@@ -96,6 +103,21 @@ UAVCalculationResult UAVCalculator::calculate(
     result.realUAVTime =
             result.flightsPerUAV *
             result.flightMissionTime;
+
+    result.operationCost =
+            result.uavCount *
+            result.realUAVTime *
+            costUAV;
+
+    result.fuelCost =
+            result.uavCount *
+            result.realUAVTime *
+            fuelConsumptionUAV *
+            fuelPriceUAV;
+
+    result.totalCost =
+            result.operationCost +
+            result.fuelCost;
 
     return result;
 }
