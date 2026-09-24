@@ -8,7 +8,8 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     oilspillwindow.cpp \
-    database/databasemanager.cpp
+    database/databasemanager.cpp \
+    calculations/uavcalculator.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -16,7 +17,8 @@ HEADERS += \
     database/databasemanager.h \
     models/environmentdata.h \
     models/aircraftdata.h \
-    models/operationresult.h
+    models/operationresult.h \
+    calculations/uavcalculator.h
 
 TARGET = OilSpillSystem
 
