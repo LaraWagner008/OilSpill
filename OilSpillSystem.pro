@@ -14,6 +14,7 @@ HEADERS += \
     mainwindow.h \
     oilspillwindow.h \
     database/databasemanager.h
+    models/environmentdata.h
 
 TARGET = OilSpillSystem
 

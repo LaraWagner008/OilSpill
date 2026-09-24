@@ -12,6 +12,7 @@
 #include <QSqlQuery>
 
 #include "database/databasemanager.h"
+#include "models/environmentdata.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -161,16 +162,7 @@ private:
     // параметры среды
     //----------------------------------
 
-    double vCurrent;
-    double dCurrent;
-
-    double vWind;
-    double dWind;
-
-    double kWind;
-
-    double driftVelocity;
-    double driftAngle;
+    EnvironmentData environment;
 
     double oilThickness;
     double minThickness;
@@ -182,10 +174,9 @@ private:
 
     double kSpread;
     double initialThickness;
-    double distanceShore;
-    double distanceBase;
-    double vulnerabilityCoefficient;
+
     bool spreadingFinished;
+
 
     //----------------------------------
     // координаты

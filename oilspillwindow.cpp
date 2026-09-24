@@ -100,19 +100,21 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     // =====================================================
 
     double sx =
-            vCurrent * sin(degToRad(dCurrent))
+            environment.vCurrent * sin(degToRad(environment.dCurrent))
             +
-            kWind * vWind * sin(degToRad(dWind));
+            environment.kWind * environment.vWind
+            * sin(degToRad(environment.dWind));
 
     double sy =
-            vCurrent * cos(degToRad(dCurrent))
+            environment.vCurrent * cos(degToRad(environment.dCurrent))
             +
-            kWind * vWind * cos(degToRad(dWind));
+            environment.kWind * environment.vWind
+            * cos(degToRad(environment.dWind));
 
-    driftVelocity =
+    environment.driftVelocity =
             sqrt(sx*sx + sy*sy);
 
-    driftAngle =
+    environment.driftAngle =
             atan2(sy,sx);
 
 
@@ -444,7 +446,7 @@ void OilSpillWindow::drawHUD()
             "≋ Скорость дрейфа<br>"
             "<b>"
             + QString::number(
-                driftVelocity,
+                environment.driftVelocity,
                 'f',
                 2)
             + " км/ч</b><br><br>";
@@ -453,7 +455,7 @@ void OilSpillWindow::drawHUD()
             "➤ Направление<br>"
             "<b>"
             + QString::number(
-                driftAngle*180/M_PI,
+                environment.driftAngle*180/M_PI,
                 'f',
                 1)
             + "°</b><br><br>";
@@ -544,13 +546,13 @@ void OilSpillWindow::drawScene()
     double targetX =
             oilCenterX
             +
-            cos(driftAngle)
+            cos(environment.driftAngle)
             * lookAhead;
 
     double targetY =
             oilCenterY
             +
-            sin(driftAngle)
+            sin(environment.driftAngle)
             * lookAhead;
 
     // SOFT CAMERA
@@ -633,13 +635,13 @@ void OilSpillWindow::updateSimulation()
     // =====================================================
 
     worldX +=
-            cos(driftAngle)
-            * driftVelocity
+            cos(environment.driftAngle)
+            * environment.driftVelocity
             * 1.15 * simulationSpeed;
 
     worldY +=
-            sin(driftAngle)
-            * driftVelocity
+            sin(environment.driftAngle)
+            * environment.driftVelocity
             * 1.15 * simulationSpeed;
 
     // =====================================================
@@ -673,11 +675,11 @@ void OilSpillWindow::updateSimulation()
             // влияние дрейфа
 
             p.vx +=
-                    cos(driftAngle)
+                    cos(environment.driftAngle)
                     * 0.05;
 
             p.vy +=
-                    sin(driftAngle)
+                    sin(environment.driftAngle)
                     * 0.05;
         }
         else
@@ -686,11 +688,11 @@ void OilSpillWindow::updateSimulation()
             // пятно в основном дрейфует
 
             p.vx +=
-                    cos(driftAngle)
+                    cos(environment.driftAngle)
                     * 0.03;
 
             p.vy +=
-                    sin(driftAngle)
+                    sin(environment.driftAngle)
                     * 0.03;
         }
 
@@ -701,13 +703,13 @@ void OilSpillWindow::updateSimulation()
         p.y += p.vy;
 
         p.x +=
-                cos(driftAngle)
-                * driftVelocity
+                cos(environment.driftAngle)
+                * environment.driftVelocity
                 * 0.65 * simulationSpeed;
 
         p.y +=
-                sin(driftAngle)
-                * driftVelocity
+                sin(environment.driftAngle)
+                * environment.driftVelocity
                 * 0.65 * simulationSpeed;
     }
 
@@ -794,7 +796,7 @@ void OilSpillWindow::paintEvent(QPaintEvent *event)
     // direction marker
 
     double dir =
-            driftAngle;
+            environment.driftAngle;
 
     QPointF arrow1(
                 cx + cos(dir)*52,
@@ -921,29 +923,29 @@ void OilSpillWindow::loadConditions()
     vulnerabilityCoefficient =
             q.value(11).toDouble();
 
-    qDebug()
-            << "Conditions loaded:"
-            << waterType
-            << vCurrent
-            << vWind
-            << initialThickness;
+qDebug()
+        << "Conditions loaded:"
+        << waterType
+        << environment.vCurrent
+        << environment.vWind
+        << initialThickness;
 */
 
     QSqlRecord rec = q.record();
 
-    vCurrent =
+    environment.vCurrent =
             q.value(rec.indexOf("Flow_speed")).toDouble();
 
-    dCurrent =
+    environment.dCurrent =
             q.value(rec.indexOf("Flow_direction")).toDouble();
 
-    vWind =
+    environment.vWind =
             q.value(rec.indexOf("Wind_speed")).toDouble();
 
-    dWind =
+    environment.dWind =
             q.value(rec.indexOf("Wind_direction")).toDouble();
 
-    kWind =
+    environment.kWind =
             q.value(rec.indexOf("Wind_coefficient")).toDouble();
 
     initialThickness =
@@ -952,29 +954,35 @@ void OilSpillWindow::loadConditions()
     kSpread =
             q.value(rec.indexOf("Surface_coefficient")).toDouble();
 
-    distanceShore =
+    environment.distanceShore =
             q.value(rec.indexOf("Distance_shore")).toDouble();
 
-    distanceBase =
+    environment.distanceBase =
             q.value(rec.indexOf("Distance_base")).toDouble();
 
-    vulnerabilityCoefficient =
+    environment.vulnerabilityCoefficient =
             q.value(rec.indexOf("Vulnerability_coefficient")).toDouble();
 
     double sx =
-            vCurrent * sin(degToRad(dCurrent))
+            environment.vCurrent
+            * sin(degToRad(environment.dCurrent))
             +
-            kWind * vWind * sin(degToRad(dWind));
+            environment.kWind
+            * environment.vWind
+            * sin(degToRad(environment.dWind));
 
     double sy =
-            vCurrent * cos(degToRad(dCurrent))
+            environment.vCurrent
+            * cos(degToRad(environment.dCurrent))
             +
-            kWind * vWind * cos(degToRad(dWind));
+            environment.kWind
+            * environment.vWind
+            * cos(degToRad(environment.dWind));
 
-    driftVelocity =
+    environment.driftVelocity =
             sqrt(sx * sx + sy * sy);
 
-    driftAngle =
+    environment.driftAngle =
             atan2(sy, sx);
 
 }
@@ -991,8 +999,8 @@ void OilSpillWindow::calculateOperation()
 {
 
     double maxPhysicalTime =
-            distanceShore /
-            driftVelocity;
+            environment.distanceShore /
+            environment.driftVelocity;
 
     if(timeLimit > maxPhysicalTime)
     {
@@ -1236,7 +1244,7 @@ void OilSpillWindow::calculateOperation()
                 fuelConsumptionUAV;
 
         double searchRadius =
-                driftVelocity *
+                environment.driftVelocity *
                 tDetect;
 
         double stripWidth =
@@ -1274,7 +1282,7 @@ void OilSpillWindow::calculateOperation()
                 rangeUAV
                 -
                 2.0 *
-                distanceBase;
+                environment.distanceBase;
 
         double searchAreaKm2 =
                 searchArea / 1000000.0;
@@ -1300,7 +1308,7 @@ void OilSpillWindow::calculateOperation()
                     searchLengthOneUAV
                     +
                     2.0 *
-                    distanceBase
+                    environment.distanceBase
                 )
                 /
                 vUAV;
@@ -1334,9 +1342,9 @@ void OilSpillWindow::calculateOperation()
            ;
 
         qDebug()
-            << "distanceBase =" << distanceBase
+            << "distanceBase =" << environment.distanceBase
             << "rangeUAV =" << rangeUAV
-            << "vDrift =" << driftVelocity;
+            << "vDrift =" << environment.driftVelocity;
 
         qDebug()
             << "UAV CHECK основной расчет"
@@ -1427,7 +1435,7 @@ void OilSpillWindow::calculateOperation()
                     boomSpeed;
 
             double tHeliFlight =
-                    2.0 * distanceBase  /
+                    2.0 * environment.distanceBase  /
                     vHeli;
 
             double tHeliMission =
@@ -1549,7 +1557,7 @@ void OilSpillWindow::calculateOperation()
                             capacityPlane);
 
                 double tPlaneFlight =
-                        2.0 * distanceBase  /
+                        2.0 * environment.distanceBase  /
                         vPlane;
 
                 double tPlaneMission =
@@ -2053,7 +2061,7 @@ void OilSpillWindow::calculateOperation()
                         fuelConsumptionUAV;
 
                 double tOneUAVFlight =
-                        2.0 * distanceBase  / vUAV +
+                        2.0 * environment.distanceBase  / vUAV +
                         tFlightUAV;
 
                 double enduranceHeli =
@@ -2303,7 +2311,7 @@ void OilSpillWindow::calculateOperation()
                     */
 
         double searchRadius =
-                driftVelocity *
+                environment.driftVelocity *
                 tDetectBest;
         /*
         double stripWidth =
@@ -2341,7 +2349,7 @@ void OilSpillWindow::calculateOperation()
                 uavsChart.value(3).toDouble()
                 -
                 2.0 *
-                distanceBase;
+                environment.distanceBase;
 
         if(searchLengthOneUAV <= 0.0)
         {
@@ -2359,7 +2367,7 @@ void OilSpillWindow::calculateOperation()
                     searchLengthOneUAV
                     +
                     2.0 *
-                    distanceBase
+                    environment.distanceBase
                 )
                 /
                 vUAV;
@@ -2451,7 +2459,7 @@ void OilSpillWindow::calculateOperation()
                 boomSpeed;
 
         double tHeliFlight =
-                2.0 * distanceBase /
+                2.0 * environment.distanceBase /
                 vHeli;
 
         double tHeliMission =
@@ -2577,7 +2585,7 @@ void OilSpillWindow::calculateOperation()
                     capacityPlane);
 
         double tPlaneFlight =
-                2.0 * distanceBase /
+                2.0 * environment.distanceBase /
                 vPlane;
 
         double tPlaneMission =
@@ -2650,13 +2658,13 @@ void OilSpillWindow::calculateOperation()
         double shoreDistance =
                 qMax(
                     0.0,
-                    distanceShore -
-                    driftVelocity * t);
+                    environment.distanceShore -
+                    environment.driftVelocity * t);
 
         double shoreFactor =
                 1.0 -
                 shoreDistance /
-                distanceShore;
+                environment.distanceShore;
 
         shoreFactor =
                 qBound(0.0, shoreFactor, 1.0);
@@ -2666,9 +2674,9 @@ void OilSpillWindow::calculateOperation()
                 *
                 shoreFactor
                 *
-                (driftVelocity / 10.0)
+                (environment.driftVelocity / 10.0)
                 *
-                vulnerabilityCoefficient
+                environment.vulnerabilityCoefficient
                 ;
 
         risk =
@@ -2731,16 +2739,16 @@ void OilSpillWindow::calculateOperation()
     double shoreDistanceNow =
             qMax(
                 0.0,
-                distanceShore
+                environment.distanceShore
                 -
-                driftVelocity
+                environment.driftVelocity
                 *
                 timeLimit);
 
     double shoreFactor =
             1.0 -
             shoreDistanceNow /
-            distanceShore;
+            environment.distanceShore;
 
 
 
@@ -2755,9 +2763,9 @@ void OilSpillWindow::calculateOperation()
             *
             shoreFactor
             *
-            (driftVelocity / 10.0)
+            (environment.driftVelocity / 10.0)
             *
-            vulnerabilityCoefficient
+            environment.vulnerabilityCoefficient
            ;
 
     if(riskValue > 1)
@@ -2923,14 +2931,14 @@ void OilSpillWindow::calculateOperation()
         double shoreDistance =
                 qMax(
                     0.0,
-                    distanceShore -
-                    driftVelocity *
+                    environment.distanceShore -
+                    environment.driftVelocity *
                     scenarioTime);
 
         double shoreFactor =
                 1.0 -
                 shoreDistance /
-                distanceShore;
+                environment.distanceShore;
 
         if(shoreFactor < 0.0)
             shoreFactor = 0.0;
@@ -2943,9 +2951,9 @@ void OilSpillWindow::calculateOperation()
                 *
                 shoreFactor
                 *
-                (driftVelocity / 10.0)
+                (environment.driftVelocity / 10.0)
                 *
-                vulnerabilityCoefficient
+                environment.vulnerabilityCoefficient
                 ;
     };
 
