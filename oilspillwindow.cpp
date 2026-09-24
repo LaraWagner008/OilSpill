@@ -1092,17 +1092,17 @@ void OilSpillWindow::calculateOperation()
             perimeter / 1000.0 *
             weightBooms;
 
-    uavNames.clear();
-    uavCosts.clear();
-    uavCounts.clear();
+    aircraft.uavNames.clear();
+    aircraft.uavCosts.clear();
+    aircraft.uavCounts.clear();
 
-    heliNames.clear();
-    heliCosts.clear();
-    heliCounts.clear();
+    aircraft.heliNames.clear();
+    aircraft.heliCosts.clear();
+    aircraft.heliCounts.clear();
 
-    planeNames.clear();
-    planeCosts.clear();
-    planeCounts.clear();
+    aircraft.planeNames.clear();
+    aircraft.planeCosts.clear();
+    aircraft.planeCounts.clear();
 
     //--------------------------------------------------
     // перебор всех вариантов
@@ -2217,17 +2217,17 @@ void OilSpillWindow::calculateOperation()
 
 
 
-    uavNames.clear();
-    uavCosts.clear();
-    uavCounts.clear();
+    aircraft.uavNames.clear();
+    aircraft.uavCosts.clear();
+    aircraft.uavCounts.clear();
 
-    heliNames.clear();
-    heliCosts.clear();
-    heliCounts.clear();
+    aircraft.heliNames.clear();
+    aircraft.heliCosts.clear();
+    aircraft.heliCounts.clear();
 
-    planeNames.clear();
-    planeCosts.clear();
-    planeCounts.clear();
+    aircraft.planeNames.clear();
+    aircraft.planeCosts.clear();
+    aircraft.planeCounts.clear();
 /*
     uavNames.push_back(bestUAV);
     uavCosts.push_back(bestUAVCost);
@@ -2420,9 +2420,9 @@ void OilSpillWindow::calculateOperation()
                 CrUAV +
                 CfUAV;
 
-        uavNames.push_back(uavName);
-        uavCosts.push_back(totalUAVCost);
-        uavCounts.push_back(countUAV);
+        aircraft.uavNames.push_back(uavName);
+        aircraft.uavCosts.push_back(totalUAVCost);
+        aircraft.uavCounts.push_back(countUAV);
     }
 
     QSqlQuery helisChart(databaseManager.database());
@@ -2516,9 +2516,9 @@ void OilSpillWindow::calculateOperation()
                 CrHeli +
                 CfHeli;
 
-        heliNames.push_back(heliName);
-        heliCosts.push_back(totalHeliCost);
-        heliCounts.push_back(countHeli);
+        aircraft.heliNames.push_back(heliName);
+        aircraft.heliCosts.push_back(totalHeliCost);
+        aircraft.heliCounts.push_back(countHeli);
     }
 
     QSqlQuery planesChart(databaseManager.database());
@@ -2640,9 +2640,9 @@ void OilSpillWindow::calculateOperation()
                 CrPlane +
                 CfPlane;
 
-        planeNames.push_back(planeName);
-        planeCosts.push_back(totalPlaneCost);
-        planeCounts.push_back(countPlane);
+        aircraft.planeNames.push_back(planeName);
+        aircraft.planeCosts.push_back(totalPlaneCost);
+        aircraft.planeCounts.push_back(countPlane);
     }
 
 
@@ -3212,9 +3212,9 @@ void OilSpillWindow::createCharts()
     QBarSet *uavSet =
             new QBarSet("БПЛА");
 
-    for(int i=0; i<uavCosts.size(); i++)
+    for(int i=0; i<aircraft.uavCosts.size(); i++)
     {
-        *uavSet << uavCosts[i] / 1000000.0;
+        *uavSet << aircraft.uavCosts[i] / 1000000.0;
     }
 
 
@@ -3241,12 +3241,12 @@ void OilSpillWindow::createCharts()
 
     QStringList cats1;
 
-    for(int i=0; i<uavNames.size(); i++)
+    for(int i=0; i<aircraft.uavNames.size(); i++)
     {
         cats1 <<
-            uavNames[i]
+            aircraft.uavNames[i]
             + "\n("
-            + QString::number(uavCounts[i])
+            + QString::number(aircraft.uavCounts[i])
             + ")";
     }
 
@@ -3294,9 +3294,9 @@ void OilSpillWindow::createCharts()
     QBarSet *heliSet =
             new QBarSet("ВК");
 
-    for(int i=0; i<heliCosts.size(); i++)
+    for(int i=0; i<aircraft.heliCosts.size(); i++)
     {
-        *heliSet << heliCosts[i] / 1000000.0;
+        *heliSet << aircraft.heliCosts[i] / 1000000.0;
     }
 
     heliSet->setColor(
@@ -3323,12 +3323,12 @@ void OilSpillWindow::createCharts()
 
     QStringList cats2;
 
-    for(int i=0; i<heliNames.size(); i++)
+    for(int i=0; i<aircraft.heliNames.size(); i++)
     {
         cats2 <<
-            heliNames[i]
+            aircraft.heliNames[i]
             + "\n("
-            + QString::number(heliCounts[i])
+            + QString::number(aircraft.heliCounts[i])
             + ")";
     }
 
@@ -3374,9 +3374,9 @@ void OilSpillWindow::createCharts()
     QBarSet *planeSet =
             new QBarSet("АК");
 
-    for(int i=0; i<planeCosts.size(); i++)
+    for(int i=0; i<aircraft.planeCosts.size(); i++)
     {
-        *planeSet << planeCosts[i] / 1000000.0;
+        *planeSet << aircraft.planeCosts[i] / 1000000.0;
     }
 
     planeSet->setColor(
@@ -3404,12 +3404,12 @@ void OilSpillWindow::createCharts()
 
     QStringList cats3;
 
-    for(int i=0; i<planeNames.size(); i++)
+    for(int i=0; i<aircraft.planeNames.size(); i++)
     {
         cats3 <<
-            planeNames[i]
+            aircraft.planeNames[i]
             + "\n("
-            + QString::number(planeCounts[i])
+            + QString::number(aircraft.planeCounts[i])
             + ")";
     }
 

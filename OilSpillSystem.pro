@@ -13,8 +13,9 @@ SOURCES += \
 HEADERS += \
     mainwindow.h \
     oilspillwindow.h \
-    database/databasemanager.h
-    models/environmentdata.h
+    database/databasemanager.h \
+    models/environmentdata.h \
+    models/aircraftdata.h
 
 TARGET = OilSpillSystem
 

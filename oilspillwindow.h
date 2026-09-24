@@ -13,6 +13,7 @@
 
 #include "database/databasemanager.h"
 #include "models/environmentdata.h"
+#include "models/aircraftdata.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -191,6 +192,7 @@ private:
     //----------------------------------
     // результаты расчета
     //----------------------------------
+    AircraftData aircraft;
 
     QString bestUAV;
     QString bestHeli;
@@ -207,18 +209,6 @@ private:
     double bestUAVFuelCost;
     double bestHeliFuelCost;
     double bestPlaneFuelCost;
-
-    QStringList uavNames;
-    QStringList heliNames;
-    QStringList planeNames;
-
-    QVector<double> uavCosts;
-    QVector<double> heliCosts;
-    QVector<double> planeCosts;
-
-    QVector<int> uavCounts;
-    QVector<int> heliCounts;
-    QVector<int> planeCounts;
 
     int bestUAVCount;
     int bestHeliCount;
