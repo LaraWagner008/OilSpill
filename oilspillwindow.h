@@ -19,17 +19,9 @@
 #include "calculations/helicoptercalculator.h"
 #include "calculations/airplanecalculator.h"
 #include "calculations/operationcalculator.h"
+#include "simulation/oilsimulation.h"
 
 QT_CHARTS_USE_NAMESPACE
-
-struct OilParticle
-{
-    double x;
-    double y;
-
-    double vx;
-    double vy;
-};
 
 struct RiskScenario
 {
@@ -206,7 +198,8 @@ private:
     AirplaneCalculator airplaneCalculator;
     OperationCalculator operationCalculator;
 
-    QVector<OilParticle> particles;
+    OilSimulation oilSimulation;
+
 };
 
 #endif

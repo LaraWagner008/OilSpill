@@ -156,14 +156,19 @@ OilSpillWindow::OilSpillWindow(QString waterType,
                 -200000,
                 400000,
                 400000);
-
-    worldX = 0;
-    worldY = 0;
-
     cameraX = 0;
     cameraY = 0;
 
-    spreadingFinished = false;
+    oilSimulation.initialize(
+                oilVolume,
+                initialThickness,
+                minThickness,
+                kSpread,
+                environment.driftVelocity,
+                environment.driftAngle,
+                currentArea,
+                maxArea);
+
     operationResult.bestCost = 1e100;
 
     operationResult.bestUAVCost = 1e100;
@@ -172,35 +177,6 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     // =====================================================
     // PARTICLES
     // =====================================================
-
-
-    int particleCount =
-            qBound(
-                300,
-                int(oilVolume * 4),
-                3000);
-
-    //for(int i=0; i<950; i++)
-    for(int i=0; i<particleCount; i++)
-    {
-        double angle =
-                degToRad(qrand()%360);
-
-        // меньше радиус -> компактное круглое пятно
-
-        double radius =
-                qSqrt(qrand()%1000) * 1.8;
-
-        OilParticle p;
-
-        p.x = cos(angle) * radius;
-        p.y = sin(angle) * radius;
-
-        p.vx = 0;
-        p.vy = 0;
-
-        particles.push_back(p);
-    }
 
     // =====================================================
     // HUD PANEL
@@ -365,9 +341,15 @@ void OilSpillWindow::drawOil()
     // MAIN OIL SILHOUETTE
     // =================================================
 
-    for(int i=0; i<particles.size(); i++)
+    const QVector<OilParticle>& particles =
+            oilSimulation.particles();
+
+    for(int i = 0;
+        i < particles.size();
+        i++)
     {
-        OilParticle &p = particles[i];
+        const OilParticle &p =
+                particles[i];
 
         // OUTER CYAN GLOW
 
@@ -516,9 +498,15 @@ void OilSpillWindow::drawScene()
     double minY = 999999;
     double maxY = -999999;
 
-    for(int i=0; i<particles.size(); i++)
+    const QVector<OilParticle>& particles =
+            oilSimulation.particles();
+
+    for(int i = 0;
+        i < particles.size();
+        i++)
     {
-        OilParticle &p = particles[i];
+        const OilParticle &p =
+                particles[i];
 
         if(p.x < minX) minX = p.x;
         if(p.x > maxX) maxX = p.x;
@@ -583,135 +571,30 @@ void OilSpillWindow::drawScene()
 void OilSpillWindow::updateSimulation()
 {
     double simulationSpeed = 5.0;
-    // =====================================================
-    // AREA GROWTH
-    // =====================================================
 
-    if(!spreadingFinished)
-    {
-        // =====================================================
-        // MODEL TIME
-        // =====================================================
+    oilSimulation.update(
+                simulationSpeed);
 
-        // шаг модельного времени (часы)
+    currentArea =
+            oilSimulation.currentArea();
 
-        double dt = 0.05 * simulationSpeed;
+    maxArea =
+            oilSimulation.maxArea();
 
-        // =====================================================
-        // S(t)=S0+PI*k*t
-        // kSpread -> км²/ч
-        // currentArea -> м²
-        // =====================================================
+    oilThickness =
+            oilSimulation.oilThickness();
 
-        currentArea +=
-                M_PI *
-                kSpread *
-                1000000.0 *
-                dt;
+    perimeter =
+            oilSimulation.perimeter();
 
-        if(currentArea >= maxArea)
-        {
-            currentArea = maxArea;
+    worldX =
+            oilSimulation.worldX();
 
-            spreadingFinished = true;
-        }
+    worldY =
+            oilSimulation.worldY();
 
-        // h(t)=V/S(t)
-
-        oilThickness =
-                oilVolume /
-                (currentArea * 1e-3);
-
-        if(oilThickness < minThickness)
-            oilThickness = minThickness;
-
-        perimeter =
-                2 * M_PI *
-                sqrt(currentArea / M_PI);
-    }
-
-    // =====================================================
-    // WORLD DRIFT
-    // =====================================================
-
-    worldX +=
-            cos(environment.driftAngle)
-            * environment.driftVelocity
-            * 1.15 * simulationSpeed;
-
-    worldY +=
-            sin(environment.driftAngle)
-            * environment.driftVelocity
-            * 1.15 * simulationSpeed;
-
-    // =====================================================
-    // PARTICLES
-    // =====================================================
-
-    for(int i=0; i<particles.size(); i++)
-    {
-        OilParticle &p = particles[i];
-
-        if(!spreadingFinished)
-        {
-            double ang =
-                    degToRad(
-                        qrand()%360);
-
-            // более мягкое растекание
-
-            double spread =
-                    0.08 +
-                    (qrand()%100)/900.0;
-
-            p.vx +=
-                    cos(ang)
-                    * spread;
-
-            p.vy +=
-                    sin(ang)
-                    * spread;
-
-            // влияние дрейфа
-
-            p.vx +=
-                    cos(environment.driftAngle)
-                    * 0.05;
-
-            p.vy +=
-                    sin(environment.driftAngle)
-                    * 0.05;
-        }
-        else
-        {
-            // после достижения min thickness
-            // пятно в основном дрейфует
-
-            p.vx +=
-                    cos(environment.driftAngle)
-                    * 0.03;
-
-            p.vy +=
-                    sin(environment.driftAngle)
-                    * 0.03;
-        }
-
-        p.vx *= 0.988;
-        p.vy *= 0.988;
-
-        p.x += p.vx;
-        p.y += p.vy;
-
-        p.x +=
-                cos(environment.driftAngle)
-                * environment.driftVelocity
-                * 0.65 * simulationSpeed;
-
-        p.y +=
-                sin(environment.driftAngle)
-                * environment.driftVelocity
-                * 0.65 * simulationSpeed;
-    }
+    spreadingFinished =
+            oilSimulation.spreadingFinished();
 
     drawScene();
 }
