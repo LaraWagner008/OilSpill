@@ -1618,11 +1618,6 @@ void OilSpillWindow::calculateOperation()
                 double CrPlane =
                         planeResult.operationCost;
 
-                double Cr =
-                        CrUAV +
-                        CrHeli +
-                        CrPlane;
-
                 //--------------------------------------------------
                 // ЗАТРАТЫ НА ТОПЛИВО
                 //--------------------------------------------------
@@ -1710,12 +1705,6 @@ void OilSpillWindow::calculateOperation()
                         heliResult.fuelCost;
                 double CfPlane =
                         planeResult.fuelCost;
-
-
-                double Cf =
-                        CfUAV +
-                        CfHeli +
-                        CfPlane;
 
                 double totalUAVCost =
                         uavResult.totalCost;
@@ -1855,17 +1844,36 @@ void OilSpillWindow::calculateOperation()
                 // ЗАТРАТЫ НА МАТЕРИАЛЫ
                 //--------------------------------------------------
 
-                double CmDisp =
-                        dispersantMassLocal *
-                        dispersantPrice;
+//СТРАЫЙ БЛОК ДЛЯ ЗАМЕНЫ СЕЙЧАС
+                OperationCalculationResult operationCalcResult =
+                        operationCalculator.calculate(
+                            CrUAV,
+                            CrHeli,
+                            CrPlane,
+                            CfUAV,
+                            CfHeli,
+                            CfPlane,
+                            dispersantMassLocal,
+                            dispersantPrice,
+                            operationResult.boomsMass,
+                            boomPrice,
+                            tDetect,
+                            tLiquid);
 
-                double CmBooms =
-                        operationResult.boomsMass *
-                        boomPrice;
+                double Cr =
+                        operationCalcResult.operationCost;
+
+                double Cf =
+                        operationCalcResult.fuelCost;
 
                 double Cm =
-                        CmDisp +
-                        CmBooms;
+                        operationCalcResult.materialCost;
+
+                double totalCost =
+                        operationCalcResult.totalCost;
+
+                double operationTime =
+                        operationCalcResult.operationTime;
 
                 //--------------------------------------------------
                 // ОБЩИЕ ЗАТРАТЫ
@@ -1884,10 +1892,7 @@ void OilSpillWindow::calculateOperation()
                     << "CfPlane=" << CfPlane
                     << "Cm=" << Cm;
 
-                double totalCost =
-                        Cr +
-                        Cf +
-                        Cm;
+
 
                 qDebug()
                         << "EPSILON"
@@ -1958,9 +1963,6 @@ void OilSpillWindow::calculateOperation()
                     localBestCost = totalCost;
                 }
                 */
-
-                double operationTime = tDetect + tLiquid;
-
 
                 qDebug()
                     << "СЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАС"
