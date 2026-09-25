@@ -162,26 +162,22 @@ private:
 
     EnvironmentData environment;
 
-    double oilThickness;
     double minThickness;
-
-    double currentArea;
-    double maxArea;
-
-    double perimeter;
-
     double kSpread;
     double initialThickness;
 
+    //Временное возвращение параметров сюда
+    double oilThickness;
+    double currentArea;
+    double maxArea;
+    double perimeter;
     bool spreadingFinished;
-
+    double worldX;
+    double worldY;
 
     //----------------------------------
     // координаты
     //----------------------------------
-
-    double worldX;
-    double worldY;
 
     double cameraX;
     double cameraY;

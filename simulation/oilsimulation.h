@@ -23,9 +23,7 @@ public:
             double minThickness,
             double kSpread,
             double driftVelocity,
-            double driftAngle,
-            double currentArea,
-            double maxArea);
+            double driftAngle);
 
     void update(double simulationSpeed);
 

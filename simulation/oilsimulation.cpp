@@ -13,18 +13,22 @@ void OilSimulation::initialize(
         double minThickness,
         double kSpread,
         double driftVelocity,
-        double driftAngle,
-        double currentArea,
-        double maxArea)
+        double driftAngle)
 {
     m_oilVolume = oilVolume;
 
     m_minThickness = minThickness;
 
-    m_currentArea = currentArea;
-    m_maxArea = maxArea;
+    m_currentArea =
+            m_oilVolume /
+            (initialThickness * 1e-3);
 
-    m_oilThickness = initialThickness;
+    m_maxArea =
+            m_oilVolume /
+            (m_minThickness * 1e-3);
+
+    m_oilThickness =
+            initialThickness;
 
     m_kSpread = kSpread;
 

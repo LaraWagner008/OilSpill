@@ -159,15 +159,28 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     cameraX = 0;
     cameraY = 0;
 
-    oilSimulation.initialize(
-                oilVolume,
-                initialThickness,
-                minThickness,
-                kSpread,
-                environment.driftVelocity,
-                environment.driftAngle,
-                currentArea,
-                maxArea);
+
+
+    currentArea =
+            oilSimulation.currentArea();
+
+    maxArea =
+            oilSimulation.maxArea();
+
+    oilThickness =
+            oilSimulation.oilThickness();
+
+    perimeter =
+            oilSimulation.perimeter();
+
+    spreadingFinished =
+            oilSimulation.spreadingFinished();
+
+    worldX =
+            oilSimulation.worldX();
+
+    worldY =
+            oilSimulation.worldY();
 
     operationResult.bestCost = 1e100;
 
@@ -445,16 +458,22 @@ void OilSpillWindow::drawHUD()
     text +=
             "⌖ Координаты<br>"
             "<b>X: "
-            + QString::number(worldX,'f',1)
+            + QString::number(
+                oilSimulation.worldX(),
+                'f',
+                1)
             + "<br>Y: "
-            + QString::number(worldY,'f',1)
+            + QString::number(
+                oilSimulation.worldY(),
+                'f',
+                1)
             + "</b><br><br>";
 
     text +=
             "⬒ Площадь<br>"
             "<b>"
             + QString::number(
-                currentArea/1000000.0,
+                oilSimulation.currentArea() / 1000000.0,
                 'f',
                 2)
             + " км²</b><br><br>";
@@ -463,7 +482,7 @@ void OilSpillWindow::drawHUD()
             "◌ Толщина плёнки<br>"
             "<b>"
             + QString::number(
-                oilThickness,
+                oilSimulation.oilThickness(),
                 'f',
                 4)
             + " мм</b><br><br>";
@@ -472,7 +491,7 @@ void OilSpillWindow::drawHUD()
             "◎ Периметр<br>"
             "<b>"
             + QString::number(
-                perimeter/1000.0,
+                oilSimulation.perimeter() / 1000.0,
                 'f',
                 2)
             + " км</b>";
@@ -574,27 +593,6 @@ void OilSpillWindow::updateSimulation()
 
     oilSimulation.update(
                 simulationSpeed);
-
-    currentArea =
-            oilSimulation.currentArea();
-
-    maxArea =
-            oilSimulation.maxArea();
-
-    oilThickness =
-            oilSimulation.oilThickness();
-
-    perimeter =
-            oilSimulation.perimeter();
-
-    worldX =
-            oilSimulation.worldX();
-
-    worldY =
-            oilSimulation.worldY();
-
-    spreadingFinished =
-            oilSimulation.spreadingFinished();
 
     drawScene();
 }
@@ -867,6 +865,35 @@ qDebug()
 
     environment.driftAngle =
             atan2(sy, sx);
+
+    //технинчески, сюда надо перенести код из 140+ строк
+/*
+    currentArea =
+            oilVolume /
+            (initialThickness * 1e-3);
+
+    // Smax = V / hmin
+
+    maxArea =
+            oilVolume /
+            (minThickness * 1e-3);
+
+    oilThickness =
+            initialThickness;
+
+    // perimeter
+
+    perimeter =
+            2 * M_PI *
+            sqrt(currentArea / M_PI);
+    */
+    oilSimulation.initialize(
+                oilVolume,
+                initialThickness,
+                minThickness,
+                kSpread,
+                environment.driftVelocity,
+                environment.driftAngle);
 
 }
 
