@@ -1381,38 +1381,43 @@ void OilSpillWindow::calculateOperation()
             // ВК
             //--------------------------------------------------
 
+          //Шаг 7.7. ВСТАВИТЬ СЮДА НОВЫЙ КОД ПРО ВК********************
+
+            HelicopterCalculationResult heliResult =
+                    helicopterCalculator.calculate(
+                        operationResult.boomsMass,
+                        capacityHeli,
+                        perimeter,
+                        boomSpeed,
+                        loadingTime,
+                        environment.distanceBase,
+                        vHeli,
+                        beta,
+                        tLiquid,
+                        fuelConsumptionHeli,
+                        costHeli,
+                        fuelPriceHeli);
+
             double nFlightsHeli =
-                    ceil(
-                        operationResult.boomsMass /
-                        capacityHeli);
+                    heliResult.flightsCount;
 
             double tBooms =
-                    (perimeter/1000.0) /
-                    boomSpeed;
+                    heliResult.boomTime;
 
             double tHeliFlight =
-                    2.0 * environment.distanceBase  /
-                    vHeli;
+                    heliResult.flightTime;
 
             double tHeliMission =
-                    tHeliFlight
-                    +
-                    tBooms
-                    +
-                    loadingTime;
+                    heliResult.missionTime;
 
             double countHeli =
-                    ceil(
-                        nFlightsHeli *
-                        tHeliMission /
-                        (beta * tLiquid));
+                    heliResult.helicopterCount;
 
             double nFlightsPerHeli =
-            ceil(nFlightsHeli / countHeli);
+                    heliResult.flightsPerHelicopter;
 
             int tRealHeli =
-            nFlightsPerHeli *
-            tHeliMission;
+                    heliResult.realHelicopterTime;
 
             //--------------------------------------------------
             // САМОЛЕТЫ
@@ -1619,7 +1624,7 @@ void OilSpillWindow::calculateOperation()
                 double CrUAV =
                         uavResult.operationCost;
                 double CrHeli =
-                    countHeli * tRealHeli * costHeli;
+                        heliResult.operationCost;
                 double CrPlane =
                     countPlane * tRealPlane * costPlane;
 
@@ -1712,10 +1717,7 @@ void OilSpillWindow::calculateOperation()
                 double CfUAV =
                         uavResult.fuelCost;
                 double CfHeli =
-                        countHeli *
-                        tRealHeli *
-                    fuelConsumptionHeli *
-                    fuelPriceHeli;
+                        heliResult.fuelCost;
                 double CfPlane =
                         countPlane *
                         tRealPlane *
@@ -1774,8 +1776,7 @@ void OilSpillWindow::calculateOperation()
                 }
 
                 double totalHeliCost =
-                        CrHeli +
-                        CfHeli;
+                        heliResult.totalCost;
 
                 /*
                 if(!heliNames.contains(heliName))
