@@ -1477,69 +1477,59 @@ void OilSpillWindow::calculateOperation()
                 // АК
                 //------------------------------------------
 
+                AirplaneCalculationResult planeResult =
+                        airplaneCalculator.calculate(
+                            currentArea,
+                            kSpread,
+                            tDetect,
+                            beta,
+                            tLiquid,
+                            sprayRate,
+                            density,
+                            vPlane,
+                            sprayWidth,
+                            environment.distanceBase,
+                            loadingTime,
+                            capacityPlane,
+                            fuelConsumptionPlane,
+                            costPlane,
+                            fuelPricePlane);
 
                 double areaAtArrival =
-                        currentArea
-                        +
-                        M_PI *
-                        kSpread *
-                        1000000.0 *
-                        (
-                            tDetect
-                            +
-                            beta * tLiquid
-                        );
+                        planeResult.areaAtArrival;
+
                 double areaAtArrivalKm2 =
-                        areaAtArrival /
-                        1000000.0;
+                        planeResult.areaAtArrivalKm2;
 
                 double dispersantVolume =
-                        areaAtArrivalKm2 *
-                        sprayRate *
-                        100.0;
+                        planeResult.dispersantVolume;
+
                 double dispersantMassLocal =
-                        dispersantVolume *
-                        density /
-                        1000.0;
+                        planeResult.dispersantMass;
 
                 double qSpray =
-                        vPlane *
-                        sprayWidth *
-                        sprayRate *
-                        100.0;
+                        planeResult.sprayCapacity;
 
                 double tSpray =
-                        areaAtArrival /
-                        qSpray;
+                        planeResult.sprayTime;
 
                 double nFlightsPlane =
-                        ceil(
-                            dispersantMassLocal /
-                            capacityPlane);
+                        planeResult.flightsCount;
 
                 double tPlaneFlight =
-                        2.0 * environment.distanceBase  /
-                        vPlane;
+                        planeResult.flightTime;
 
                 double tPlaneMission =
-                        tPlaneFlight
-                        +
-                        tSpray
-                        +
-                        loadingTime;
+                        planeResult.missionTime;
 
                 double countPlane =
-                        ceil(
-                            nFlightsPlane *
-                            tPlaneMission /
-                            tLiquid);
+                        planeResult.airplaneCount;
 
                 double nFlightsPerPlane =
-                ceil(nFlightsPlane / countPlane);
+                        planeResult.flightsPerAirplane;
 
                 int tRealPlane =
-                nFlightsPerPlane *
-                tPlaneMission;
+                        planeResult.realAirplaneTime;
 
                 qDebug()
                     << "PLANE CHECK"
@@ -1626,7 +1616,7 @@ void OilSpillWindow::calculateOperation()
                 double CrHeli =
                         heliResult.operationCost;
                 double CrPlane =
-                    countPlane * tRealPlane * costPlane;
+                        planeResult.operationCost;
 
                 double Cr =
                         CrUAV +
@@ -1719,10 +1709,7 @@ void OilSpillWindow::calculateOperation()
                 double CfHeli =
                         heliResult.fuelCost;
                 double CfPlane =
-                        countPlane *
-                        tRealPlane *
-                    fuelConsumptionPlane *
-                    fuelPricePlane;
+                        planeResult.fuelCost;
 
 
                 double Cf =
@@ -1819,8 +1806,7 @@ void OilSpillWindow::calculateOperation()
                 }
 
                 double totalPlaneCost =
-                        CrPlane +
-                        CfPlane;
+                        planeResult.totalCost;
 
                 /*
                 if(!planeNames.contains(planeName))

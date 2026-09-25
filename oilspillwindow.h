@@ -17,6 +17,7 @@
 #include "models/operationresult.h"
 #include "calculations/uavcalculator.h"
 #include "calculations/helicoptercalculator.h"
+#include "calculations/airplanecalculator.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -201,6 +202,7 @@ private:
 
     UAVCalculator uavCalculator;
     HelicopterCalculator helicopterCalculator;
+    AirplaneCalculator airplaneCalculator;
 
     QVector<OilParticle> particles;
 };

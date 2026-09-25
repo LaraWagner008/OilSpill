@@ -10,7 +10,8 @@ SOURCES += \
     oilspillwindow.cpp \
     database/databasemanager.cpp \
     calculations/uavcalculator.cpp \
-    calculations/helicoptercalculator.cpp
+    calculations/helicoptercalculator.cpp \
+    calculations/airplanecalculator.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -20,7 +21,8 @@ HEADERS += \
     models/aircraftdata.h \
     models/operationresult.h \
     calculations/uavcalculator.h \
-    calculations/helicoptercalculator.h
+    calculations/helicoptercalculator.h \
+    calculations/airplanecalculator.h
 
 TARGET = OilSpillSystem
 
