@@ -2216,7 +2216,7 @@ void OilSpillWindow::calculateOperation()
 
 
 
-
+/*
     riskTimes.clear();
     riskValues.clear();
 
@@ -2264,6 +2264,41 @@ void OilSpillWindow::calculateOperation()
             << 0.50
             << 0.75
             << 1.00;
+*/
+    RiskCalculationResult riskResult =
+            riskCalculator.calculate(
+                oilVolume,
+                environment.distanceShore,
+                environment.driftVelocity,
+                environment.vulnerabilityCoefficient,
+                timeLimit,
+                operationResult.bestOperationTime,
+                graphOperationTimes,
+                graphCosts,
+                graphUAVNames,
+                graphHeliNames,
+                graphPlaneNames,
+                graphUAVCounts,
+                graphHeliCounts,
+                graphPlaneCounts);
+
+    operationResult.riskValue =
+            riskResult.riskValue;
+
+    operationResult.riskLevel =
+            riskResult.riskLevel;
+
+    operationResult.riskColor =
+            riskResult.riskColor;
+
+    riskTimes =
+            riskResult.riskTimes;
+
+    riskValues =
+            riskResult.riskValues;
+
+    scenarios =
+            riskResult.scenarios;
 
     qDebug()
             << "MAIN COST"
@@ -2386,12 +2421,12 @@ void OilSpillWindow::calculateOperation()
 
     QVector<RiskScenario> scenarios;
 */
-    scenarios.clear();
+   // scenarios.clear();
 
 
     QVector<double> scenarioTimes;
 
-
+/*
 
     for(double fraction : scenarioFractions)
     {
@@ -2468,7 +2503,7 @@ void OilSpillWindow::calculateOperation()
 
         scenarios.push_back(s);
     }
-
+*/
     for(int i = 0; i < scenarioTimes.size(); i++)
     {
         double scenarioTime =
