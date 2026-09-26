@@ -542,27 +542,19 @@ qDebug()
     environment.vulnerabilityCoefficient =
             q.value(rec.indexOf("Vulnerability_coefficient")).toDouble();
 
-    double sx =
-            environment.vCurrent
-            * sin(degToRad(environment.dCurrent))
-            +
-            environment.kWind
-            * environment.vWind
-            * sin(degToRad(environment.dWind));
-
-    double sy =
-            environment.vCurrent
-            * cos(degToRad(environment.dCurrent))
-            +
-            environment.kWind
-            * environment.vWind
-            * cos(degToRad(environment.dWind));
+    EnvironmentCalculationResult environmentResult =
+            environmentCalculator.calculate(
+                environment.vCurrent,
+                environment.dCurrent,
+                environment.vWind,
+                environment.dWind,
+                environment.kWind);
 
     environment.driftVelocity =
-            sqrt(sx * sx + sy * sy);
+            environmentResult.driftVelocity;
 
     environment.driftAngle =
-            atan2(sy, sx);
+            environmentResult.driftAngle;
 
     //технинчески, сюда надо перенести код из 140+ строк
 /*

@@ -17,7 +17,8 @@ SOURCES += \
     visualization/oilsimulationscene.cpp \
     visualization/hudrenderer.cpp \
     visualization/chartsmanager.cpp \
-    calculations/riskcalculator.cpp
+    calculations/riskcalculator.cpp \
+    calculations/environmentcalculator.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -35,7 +36,8 @@ HEADERS += \
     visualization/hudrenderer.h \
     visualization/chartsmanager.h \
     models/riskscenario.h \
-    calculations/riskcalculator.h
+    calculations/riskcalculator.h \
+    calculations/environmentcalculator.h
 
 TARGET = OilSpillSystem
 

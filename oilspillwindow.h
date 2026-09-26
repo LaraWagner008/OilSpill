@@ -25,6 +25,7 @@
 #include "visualization/chartsmanager.h"
 #include "models/riskscenario.h"
 #include "calculations/riskcalculator.h"
+#include "calculations/environmentcalculator.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -173,6 +174,7 @@ private:
     AirplaneCalculator airplaneCalculator;
     OperationCalculator operationCalculator;
     RiskCalculator riskCalculator;
+    EnvironmentCalculator environmentCalculator;
 
     OilSimulation oilSimulation;
     OilSimulationScene *oilScene;

@@ -466,7 +466,7 @@ void ChartsManager::createCharts(
     QHBoxLayout *legendLayout =
             new QHBoxLayout;
 
-    legendLayout->setSpacing(15);
+    legendLayout->setSpacing(40);
 
     legendLayout->addWidget(
         createLegendItem(
@@ -490,6 +490,9 @@ void ChartsManager::createCharts(
 
     frameLayout->setContentsMargins(
                 10, 10, 10, 10);
+
+    legendLayout->setAlignment(
+            Qt::AlignLeft);
 
     frameLayout->addLayout(
                 legendLayout);
@@ -521,6 +524,10 @@ QWidget* ChartsManager::createLegendItem(
 
     QLabel *textLabel =
             new QLabel(text);
+
+    textLabel->setStyleSheet(
+        "color: white;"
+        "font-size: 13px;");
 
     layout->setContentsMargins(
                 0, 0, 0, 0);
