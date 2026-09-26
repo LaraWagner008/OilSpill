@@ -2,6 +2,7 @@
 #define DATABASEMANAGER_H
 
 #include <QSqlDatabase>
+#include "../models/operationconstants.h"
 
 class DatabaseManager
 {
@@ -10,6 +11,7 @@ public:
 
     bool connect();
     QSqlDatabase database() const;
+    OperationConstants loadOperationConstants() const;
 
 private:
     QSqlDatabase m_database;

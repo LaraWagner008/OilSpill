@@ -37,7 +37,8 @@ HEADERS += \
     visualization/chartsmanager.h \
     models/riskscenario.h \
     calculations/riskcalculator.h \
-    calculations/environmentcalculator.h
+    calculations/environmentcalculator.h \
+    models/operationconstants.h
 
 TARGET = OilSpillSystem
 

@@ -26,6 +26,7 @@
 #include "models/riskscenario.h"
 #include "calculations/riskcalculator.h"
 #include "calculations/environmentcalculator.h"
+#include "models/operationconstants.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -175,6 +176,7 @@ private:
     OperationCalculator operationCalculator;
     RiskCalculator riskCalculator;
     EnvironmentCalculator environmentCalculator;
+    OperationConstants operationConstants;
 
     OilSimulation oilSimulation;
     OilSimulationScene *oilScene;

@@ -660,47 +660,35 @@ void OilSpillWindow::calculateOperation()
     // Константы
     //--------------------------------------------------
 
-    QSqlQuery c(databaseManager.database());
-
-    c.exec("SELECT * FROM ConstData");
-    qDebug() << "ConstData exec =" << c.lastError().text();
-
-    if(!c.next())
-    {
-        qDebug() << "ConstData EMPTY";
-        return;
-    }
+    operationConstants =
+            databaseManager.loadOperationConstants();
 
     double viewingAngle =
-            c.value(1).toDouble();
+            operationConstants.viewingAngle;
 
     double flightHeight =
-            c.value(2).toDouble();
+            operationConstants.flightHeight;
 
     double loadingTime =
-            c.value(3).toDouble();
+            operationConstants.loadingTime;
 
     double weightBooms =
-            c.value(4).toDouble();
+            operationConstants.weightBooms;
 
     double sprayRate =
-            c.value(5).toDouble();
+            operationConstants.sprayRate;
 
     double density =
-            c.value(6).toDouble();
+            operationConstants.density;
 
     double boomSpeed =
-            c.value(7).toDouble();
-
-    /*
-    double fuelPrice =
-            c.value(8).toDouble();*/
+            operationConstants.boomSpeed;
 
     double boomPrice =
-            c.value(8).toDouble();
+            operationConstants.boomPrice;
 
     double dispersantPrice =
-            c.value(9).toDouble();
+            operationConstants.dispersantPrice;
 
     //--------------------------------------------------
     // масса нефти
@@ -843,7 +831,7 @@ void OilSpillWindow::calculateOperation()
                 uavs.value(6).toDouble();
 
         double fuelPriceUAV =
-                c.value(7).toDouble();
+                operationConstants.fuelPriceUAV;
 
         //--------------------------------------------------
         // производительность БПЛА
@@ -985,7 +973,7 @@ void OilSpillWindow::calculateOperation()
                     helis.value(7).toDouble();
 
             double fuelPriceHeli =
-                    c.value(8).toDouble();
+                    operationConstants.fuelPriceHeli;
 
             //--------------------------------------------------
             // ограничение по дальности
@@ -1078,7 +1066,7 @@ void OilSpillWindow::calculateOperation()
                         planes.value(8).toDouble();
 
                 double fuelPricePlane =
-                        c.value(8).toDouble();
+                        operationConstants.fuelPricePlane;
 
                 //------------------------------------------
                 // ограничение по дальности
@@ -1838,7 +1826,7 @@ void OilSpillWindow::calculateOperation()
                 uavsChart.value(6).toDouble();
 
         double fuelPriceUAV =
-                c.value(7).toDouble();
+                operationConstants.fuelPriceUAV;
 
         double stripWidth =
                 2.0 *
@@ -2007,8 +1995,8 @@ void OilSpillWindow::calculateOperation()
         double costHeli =
                 helisChart.value(7).toDouble();
 
-        double fuelPriceHeli =
-                c.value(8).toDouble();
+        double  fuelPriceHeli=
+                operationConstants.fuelPriceHeli;
 
         double nFlightsHeli =
                 ceil(
@@ -2106,8 +2094,8 @@ void OilSpillWindow::calculateOperation()
         double costPlane =
                 planesChart.value(8).toDouble();
 
-        double fuelPricePlane =
-                c.value(8).toDouble();
+        double  fuelPricePlane=
+                operationConstants.fuelPricePlane;
 
         double areaAtArrival =
                 oilSimulation.currentArea() +
