@@ -165,8 +165,7 @@ private:
     double minThickness;
     double kSpread;
     double initialThickness;
-
-    //Временное возвращение параметров сюда
+/*
     double oilThickness;
     double currentArea;
     double maxArea;
@@ -174,7 +173,7 @@ private:
     bool spreadingFinished;
     double worldX;
     double worldY;
-
+*/
     //----------------------------------
     // координаты
     //----------------------------------

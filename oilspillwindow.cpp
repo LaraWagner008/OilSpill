@@ -49,6 +49,8 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     // ЮЫЛО connectDatabase();
     databaseManager.connect(); //СТАЛО
 
+    minThickness = 0.001;
+
     loadConditions();
     operationResult.bestUAVCount = 0;
     operationResult.bestHeliCount = 0;
@@ -91,39 +93,15 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     // ПАРАМЕТРЫ
     // =====================================================
 
-
-
-    minThickness = 0.001;
-
     // =====================================================
     // DRIFT
     // =====================================================
-
-    double sx =
-            environment.vCurrent * sin(degToRad(environment.dCurrent))
-            +
-            environment.kWind * environment.vWind
-            * sin(degToRad(environment.dWind));
-
-    double sy =
-            environment.vCurrent * cos(degToRad(environment.dCurrent))
-            +
-            environment.kWind * environment.vWind
-            * cos(degToRad(environment.dWind));
-
-    environment.driftVelocity =
-            sqrt(sx*sx + sy*sy);
-
-    environment.driftAngle =
-            atan2(sy,sx);
-
-
 
     // =====================================================
     // AREA
     // =====================================================
 
-
+/*
     currentArea =
             oilVolume /
             (initialThickness * 1e-3);
@@ -142,6 +120,7 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     perimeter =
             2 * M_PI *
             sqrt(currentArea / M_PI);
+*/
 
     // =====================================================
     // SCENE
@@ -160,7 +139,7 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     cameraY = 0;
 
 
-
+/*
     currentArea =
             oilSimulation.currentArea();
 
@@ -181,6 +160,7 @@ OilSpillWindow::OilSpillWindow(QString waterType,
 
     worldY =
             oilSimulation.worldY();
+            */
 
     operationResult.bestCost = 1e100;
 
@@ -262,6 +242,9 @@ OilSpillWindow::OilSpillWindow(QString waterType,
             &OilSpillWindow::updateSimulation);
 
     timer->start(33);
+
+    qDebug() << "Simulation timer started";
+
     operationResult.bestCost = 1e30;
 
     calculateOperation();
@@ -593,7 +576,6 @@ void OilSpillWindow::updateSimulation()
 
     oilSimulation.update(
                 simulationSpeed);
-
     drawScene();
 }
 
@@ -894,15 +876,37 @@ qDebug()
                 kSpread,
                 environment.driftVelocity,
                 environment.driftAngle);
+/*
+    currentArea =
+            oilSimulation.currentArea();
+
+    maxArea =
+            oilSimulation.maxArea();
+
+    oilThickness =
+            oilSimulation.oilThickness();
+
+    perimeter =
+            oilSimulation.perimeter();
+
+    spreadingFinished =
+            oilSimulation.spreadingFinished();
+
+    worldX =
+            oilSimulation.worldX();
+
+    worldY =
+            oilSimulation.worldY();
+            */
 
 }
-
 
 
 double OilSpillWindow::calculateSearchArea()
 {
-    return currentArea * 1.25;
+    return oilSimulation.currentArea() * 1.25;
 }
+
 QVector<double> riskCosts;
 QVector<QString> riskColors;
 void OilSpillWindow::calculateOperation()
@@ -999,7 +1003,7 @@ void OilSpillWindow::calculateOperation()
             density;
 
     operationResult.boomsMass =
-            perimeter / 1000.0 *
+            oilSimulation.perimeter() / 1000.0 *
             weightBooms;
 
     aircraft.uavNames.clear();
@@ -1291,13 +1295,11 @@ void OilSpillWindow::calculateOperation()
             // ВК
             //--------------------------------------------------
 
-          //Шаг 7.7. ВСТАВИТЬ СЮДА НОВЫЙ КОД ПРО ВК********************
-
             HelicopterCalculationResult heliResult =
                     helicopterCalculator.calculate(
                         operationResult.boomsMass,
                         capacityHeli,
-                        perimeter,
+                        oilSimulation.perimeter(),
                         boomSpeed,
                         loadingTime,
                         environment.distanceBase,
@@ -1389,7 +1391,7 @@ void OilSpillWindow::calculateOperation()
 
                 AirplaneCalculationResult planeResult =
                         airplaneCalculator.calculate(
-                            currentArea,
+                            oilSimulation.currentArea(),
                             kSpread,
                             tDetect,
                             beta,
@@ -2306,7 +2308,7 @@ void OilSpillWindow::calculateOperation()
                     capacityHeli);
 
         double tBooms =
-                (perimeter / 1000.0) /
+                (oilSimulation.perimeter() / 1000.0) /
                 boomSpeed;
 
         double tHeliFlight =
@@ -2400,7 +2402,7 @@ void OilSpillWindow::calculateOperation()
                 c.value(8).toDouble();
 
         double areaAtArrival =
-                currentArea +
+                oilSimulation.currentArea() +
                 M_PI *
                 kSpread *
                 1000000.0 *

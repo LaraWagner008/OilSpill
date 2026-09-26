@@ -30,6 +30,8 @@ void OilSimulation::initialize(
     m_oilThickness =
             initialThickness;
 
+
+
     m_kSpread = kSpread;
 
     m_driftVelocity = driftVelocity;
@@ -38,7 +40,9 @@ void OilSimulation::initialize(
     m_worldX = 0.0;
     m_worldY = 0.0;
 
+
     m_spreadingFinished = false;
+
 
     m_perimeter =
             2.0 *
