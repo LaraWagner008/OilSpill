@@ -20,6 +20,7 @@
 #include "calculations/airplanecalculator.h"
 #include "calculations/operationcalculator.h"
 #include "simulation/oilsimulation.h"
+#include "visualization/oilsimulationscene.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -82,8 +83,6 @@ private:
     QVector<double> graphOperationTimes;
 
     void drawScene();
-    void drawWater();
-    void drawOil();
     void drawHUD();
 
     double degToRad(double deg);
@@ -194,6 +193,7 @@ private:
     OperationCalculator operationCalculator;
 
     OilSimulation oilSimulation;
+    OilSimulationScene *oilScene;
 
 };
 

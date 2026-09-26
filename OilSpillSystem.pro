@@ -13,7 +13,8 @@ SOURCES += \
     calculations/helicoptercalculator.cpp \
     calculations/airplanecalculator.cpp \
     calculations/operationcalculator.cpp \
-    simulation/oilsimulation.cpp
+    simulation/oilsimulation.cpp \
+    visualization/oilsimulationscene.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -26,7 +27,8 @@ HEADERS += \
     calculations/helicoptercalculator.h \
     calculations/airplanecalculator.h \
     calculations/operationcalculator.h \
-    simulation/oilsimulation.h
+    simulation/oilsimulation.h \
+    visualization/oilsimulationscene.h
 
 TARGET = OilSpillSystem
 
