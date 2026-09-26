@@ -21,6 +21,7 @@
 #include "calculations/operationcalculator.h"
 #include "simulation/oilsimulation.h"
 #include "visualization/oilsimulationscene.h"
+#include "visualization/hudrenderer.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -83,7 +84,6 @@ private:
     QVector<double> graphOperationTimes;
 
     void drawScene();
-    void drawHUD();
 
     double degToRad(double deg);
 
@@ -125,6 +125,7 @@ private:
     QTimer *timer;
 
     QLabel *hud;
+    HUDRenderer *hudRenderer;
 
     //----------------------------------
     // окна результатов
@@ -177,8 +178,8 @@ private:
     // координаты
     //----------------------------------
 
-    double cameraX;
-    double cameraY;
+//    double cameraX;
+  //  double cameraY;
 
     //----------------------------------
     // результаты расчета

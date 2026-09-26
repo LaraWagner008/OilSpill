@@ -206,6 +206,11 @@ OilSpillWindow::OilSpillWindow(QString waterType,
                 "}"
 
                 );
+    hudRenderer =
+            new HUDRenderer(
+                hud,
+                &oilSimulation);
+
     //--------------------------------------------------
     // РЕЗУЛЬТАТЫ
     //--------------------------------------------------
@@ -261,88 +266,14 @@ double OilSpillWindow::degToRad(double deg)
 
 
 
-
-void OilSpillWindow::drawHUD()
-{
-    QString text;
-
-    text +=
-            "<div align='center'>"
-            "<span style='font-size:22px;"
-            "font-weight:700;"
-            "color:#7ffeff;'>"
-            "ПАРАМЕТРЫ РАЗЛИВА"
-            "</span>"
-            "</div><br>";
-
-    text +=
-            "≋ Скорость дрейфа<br>"
-            "<b>"
-            + QString::number(
-                environment.driftVelocity,
-                'f',
-                2)
-            + " км/ч</b><br><br>";
-
-    text +=
-            "➤ Направление<br>"
-            "<b>"
-            + QString::number(
-                environment.driftAngle*180/M_PI,
-                'f',
-                1)
-            + "°</b><br><br>";
-
-    text +=
-            "⌖ Координаты<br>"
-            "<b>X: "
-            + QString::number(
-                oilSimulation.worldX(),
-                'f',
-                1)
-            + "<br>Y: "
-            + QString::number(
-                oilSimulation.worldY(),
-                'f',
-                1)
-            + "</b><br><br>";
-
-    text +=
-            "⬒ Площадь<br>"
-            "<b>"
-            + QString::number(
-                oilSimulation.currentArea() / 1000000.0,
-                'f',
-                2)
-            + " км²</b><br><br>";
-
-    text +=
-            "◌ Толщина плёнки<br>"
-            "<b>"
-            + QString::number(
-                oilSimulation.oilThickness(),
-                'f',
-                4)
-            + " мм</b><br><br>";
-
-    text +=
-            "◎ Периметр<br>"
-            "<b>"
-            + QString::number(
-                oilSimulation.perimeter() / 1000.0,
-                'f',
-                2)
-            + " км</b>";
-
-    hud->setText(text);
-}
-
 void OilSpillWindow::drawScene()
 {
     oilScene->drawWater();
     oilScene->drawOil();
 
-    drawHUD();
+    hudRenderer->draw(
+                environment.driftVelocity,
+                environment.driftAngle);
 
     // =====================================================
     // SMART CAMERA

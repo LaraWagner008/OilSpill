@@ -14,7 +14,8 @@ SOURCES += \
     calculations/airplanecalculator.cpp \
     calculations/operationcalculator.cpp \
     simulation/oilsimulation.cpp \
-    visualization/oilsimulationscene.cpp
+    visualization/oilsimulationscene.cpp \
+    visualization/hudrenderer.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -28,7 +29,8 @@ HEADERS += \
     calculations/airplanecalculator.h \
     calculations/operationcalculator.h \
     simulation/oilsimulation.h \
-    visualization/oilsimulationscene.h
+    visualization/oilsimulationscene.h \
+    visualization/hudrenderer.h
 
 TARGET = OilSpillSystem
 
