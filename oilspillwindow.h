@@ -22,26 +22,10 @@
 #include "simulation/oilsimulation.h"
 #include "visualization/oilsimulationscene.h"
 #include "visualization/hudrenderer.h"
+#include "visualization/chartsmanager.h"
+#include "models/riskscenario.h"
 
 QT_CHARTS_USE_NAMESPACE
-
-struct RiskScenario
-{
-    QString level;
-    QString color;
-
-    double risk;
-    double time;
-    double cost;
-
-    QString uav;
-    QString heli;
-    QString plane;
-
-    int uavCount;
-    int heliCount;
-    int planeCount;
-};
 
 class OilSpillWindow : public QGraphicsView
 {
@@ -61,9 +45,7 @@ private slots:
 
 private:
     QVector<RiskScenario> scenarios;
-    QWidget* createLegendItem(
-            const QColor &color,
-            const QString &text);
+
     //----------------------------------
     // существующая модель
     //----------------------------------
@@ -100,6 +82,7 @@ private:
     //----------------------------------
 
     void createCharts();
+    void updateResultPanel();
 
     //----------------------------------
     // расчеты
@@ -133,11 +116,7 @@ private:
 
     QLabel *resultPanel;
 
-    QChartView *uavChart;
-    QChartView *heliChart;
-    QChartView *planeChart;
-
-    QChartView *costChart;
+    ChartsManager chartsManager;
 
     //----------------------------------
     // БД

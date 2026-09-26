@@ -257,6 +257,7 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     calculateOperation();
 
     createCharts();
+    updateResultPanel();
 }
 
 double OilSpillWindow::degToRad(double deg)
@@ -2737,7 +2738,7 @@ void OilSpillWindow::calculateOperation()
             );
     }
 }
-
+/*
 QWidget* OilSpillWindow::createLegendItem(
         const QColor &color,
         const QString &text)
@@ -2770,484 +2771,17 @@ QWidget* OilSpillWindow::createLegendItem(
 
     return item;
 }
-
+*/
 void OilSpillWindow::createCharts()
 {
-    //--------------------------------------------------
-    // БПЛА
-    //--------------------------------------------------
 
-    QBarSet *uavSet =
-            new QBarSet("БПЛА");
-
-    for(int i=0; i<aircraft.uavCosts.size(); i++)
-    {
-        *uavSet << aircraft.uavCosts[i] / 1000000.0;
-    }
-
-
-    uavSet->setColor(
-                QColor(35, 182, 175));
-
-    QBarSeries *uavSeries =
-            new QBarSeries();
-
-    uavSeries->append(uavSet);
-
-    QChart *uav =
-            new QChart();
-
-    uav->addSeries(uavSeries);
-
-    uav->setTitle("<b>БПЛА</b>");
-
-    // Настройка фона и рамки в стиле HUD
-    uav->setBackgroundPen(QPen(Qt::NoPen));  // Убираем собственную рамку
-    uav->setBackgroundBrush(QBrush(QColor(255, 255, 255)));  // Белый фон
-    uav->setPlotAreaBackgroundVisible(true);
-    uav->setPlotAreaBackgroundBrush(QBrush(QColor(255, 255, 255)));
-
-    QStringList cats1;
-
-    for(int i=0; i<aircraft.uavNames.size(); i++)
-    {
-        cats1 <<
-            aircraft.uavNames[i]
-            + "\n("
-            + QString::number(aircraft.uavCounts[i])
-            + ")";
-    }
-
-    QBarCategoryAxis *axis1 =
-            new QBarCategoryAxis();
-
-    axis1->append(cats1);
-    uav->layout()->setContentsMargins(0, 0, 0, 0);
-    uav->createDefaultAxes();
-
-    uav->setAxisX(
-                axis1,
-                uavSeries);
-    QFont axisFont;
-    axisFont.setPointSize(5);
-
-    axis1->setLabelsFont(axisFont);
-
-    uav->legend()->hide();
-
-    // Создаём QChartView без рамки
-    uavChart = new QChartView(uav);
-    uavChart->setStyleSheet("QChartView { border: none; background: transparent; }");
-
-    // Создаём фрейм-контейнер с голубой рамкой
-    QFrame *uavFrame = new QFrame(this);
-    uavFrame->setGeometry(0, 750, 660, 250);
-    uavFrame->setStyleSheet(
-        "QFrame{"
-        "    background-color: rgba(4,14,28,120);"
-        "    border: 1px solid rgba(0,255,255,120);"
-        "    border-radius: 15px;"
-        "}"
-    );
-
-    // Используем layout для автоматического позиционирования
-    QVBoxLayout *uavFrameLayout = new QVBoxLayout(uavFrame);
-    uavFrameLayout->setContentsMargins(15, 15, 15, 15);  // Отступы внутри рамки
-    uavFrameLayout->addWidget(uavChart);
-
-    //--------------------------------------------------
-    // ВК
-    //--------------------------------------------------
-
-    QBarSet *heliSet =
-            new QBarSet("ВК");
-
-    for(int i=0; i<aircraft.heliCosts.size(); i++)
-    {
-        *heliSet << aircraft.heliCosts[i] / 1000000.0;
-    }
-
-    heliSet->setColor(
-                QColor(0, 214, 217));
-
-    QBarSeries *heliSeries =
-            new QBarSeries();
-
-    heliSeries->append(heliSet);
-
-    QChart *heli =
-            new QChart();
-
-    heli->addSeries(
-                heliSeries);
-
-    heli->setTitle("<b>ВК</b>");
-
-    // Настройка фона и рамки в стиле HUD
-    heli->setBackgroundPen(QPen(Qt::NoPen));  // Убираем собственную рамку
-    heli->setBackgroundBrush(QBrush(QColor(255, 255, 255)));  // Белый фон
-    heli->setPlotAreaBackgroundVisible(true);
-    heli->setPlotAreaBackgroundBrush(QBrush(QColor(255, 255, 255)));
-
-    QStringList cats2;
-
-    for(int i=0; i<aircraft.heliNames.size(); i++)
-    {
-        cats2 <<
-            aircraft.heliNames[i]
-            + "\n("
-            + QString::number(aircraft.heliCounts[i])
-            + ")";
-    }
-
-    QBarCategoryAxis *axis2 =
-            new QBarCategoryAxis();
-
-    axis2->append(cats2);
-    heli->layout()->setContentsMargins(0, 0, 0, 0);
-    heli->createDefaultAxes();
-
-    heli->setAxisX(
-                axis2,
-                heliSeries);
-
-    // axis2->setLabelsFont(axisFont);
-
-    heli->legend()->hide();
-
-    // Создаём QChartView без рамки
-    heliChart = new QChartView(heli);
-    heliChart->setStyleSheet("QChartView { border: none; background: transparent; }");
-
-    // Создаём фрейм-контейнер с голубой рамкой
-    QFrame *heliFrame = new QFrame(this);
-    heliFrame->setGeometry(660, 750, 630, 250);
-    heliFrame->setStyleSheet(
-        "QFrame{"
-        "    background-color: rgba(4,14,28,120);"
-        "    border: 1px solid rgba(0,255,255,120);"
-        "    border-radius: 15px;"
-        "}"
-    );
-
-    // Используем layout для автоматического позиционирования
-    QVBoxLayout *heliFrameLayout = new QVBoxLayout(heliFrame);
-    heliFrameLayout->setContentsMargins(15, 15, 15, 15);  // Отступы внутри рамки
-    heliFrameLayout->addWidget(heliChart);
-
-    //--------------------------------------------------
-    // АК
-    //--------------------------------------------------
-
-    QBarSet *planeSet =
-            new QBarSet("АК");
-
-    for(int i=0; i<aircraft.planeCosts.size(); i++)
-    {
-        *planeSet << aircraft.planeCosts[i] / 1000000.0;
-    }
-
-    planeSet->setColor(
-                QColor(82, 253, 255));
-
-    QBarSeries *planeSeries =
-            new QBarSeries();
-
-    planeSeries->append(
-                planeSet);
-
-    QChart *plane =
-            new QChart();
-
-    plane->addSeries(
-                planeSeries);
-
-    plane->setTitle("<b>АК</b>");
-
-    // Настройка фона и рамки в стиле HUD
-    plane->setBackgroundPen(QPen(Qt::NoPen));  // Убираем собственную рамку
-    plane->setBackgroundBrush(QBrush(QColor(255, 255, 255)));  // Белый фон
-    plane->setPlotAreaBackgroundVisible(true);
-    plane->setPlotAreaBackgroundBrush(QBrush(QColor(255, 255, 255)));
-
-    QStringList cats3;
-
-    for(int i=0; i<aircraft.planeNames.size(); i++)
-    {
-        cats3 <<
-            aircraft.planeNames[i]
-            + "\n("
-            + QString::number(aircraft.planeCounts[i])
-            + ")";
-    }
-
-    QBarCategoryAxis *axis3 =
-            new QBarCategoryAxis();
-
-    axis3->append(cats3);
-    plane->layout()->setContentsMargins(0, 0, 0, 0);
-    plane->createDefaultAxes();
-
-    plane->setAxisX(
-                axis3,
-                planeSeries);
-
-    // axis3->setLabelsFont(axisFont);
-
-    plane->legend()->hide();
-
-    // Создаём QChartView без рамки
-    planeChart = new QChartView(plane);
-    planeChart->setStyleSheet("QChartView { border: none; background: transparent; }");
-
-    // Создаём фрейм-контейнер с голубой рамкой
-    QFrame *planeFrame = new QFrame(this);
-    planeFrame->setGeometry(1290, 750, 620, 250);
-    planeFrame->setStyleSheet(
-        "QFrame{"
-        "    background-color: rgba(4,14,28,120);"
-        "    border: 1px solid rgba(0,255,255,120);"
-        "    border-radius: 15px;"
-        "}"
-    );
-
-    // Используем layout для автоматического позиционирования
-    QVBoxLayout *planeFrameLayout = new QVBoxLayout(planeFrame);
-    planeFrameLayout->setContentsMargins(15, 15, 15, 15);  // Отступы внутри рамки
-    planeFrameLayout->addWidget(planeChart);
-
-    //--------------------------------------------------
-    // ОБЩИЙ ГРАФИК
-    //--------------------------------------------------
-
-    QLineSeries *series =
-            new QLineSeries();
-
-    double costMln =
-            operationResult.bestCost / 1000000.0; // для графика в млн руб а не просто руб
-
-
-
-    for(int i = 0; i < graphTimes.size(); i++)
-    {    qDebug() << "graphTimes=" << graphTimes;
-        qDebug() << "graphCosts" << graphCosts;
-        series->append(
-            graphTimes[i],
-            graphCosts[i]);
-    }
-
-
-    /*
-    series->append(
-            0,
-            costMln * 1.2);
-
-    series->append(
-            bestOperationTime,
-            costMln);
-
-    series->append(
-            bestOperationTime * 1.2,
-            costMln * 1.1);
-    */
-
-
-
-    series->setColor(
-                QColor(255,80,180));
-
-    QChart *cost =
-            new QChart();
-
-    cost->addSeries(series);
-/*
-    for(int i = 0; i < riskCosts.size(); i++)
-    {
-        QLineSeries *riskLine =
-                new QLineSeries();
-
-        riskLine->append(
-                    0,
-                    riskCosts[i]);
-
-        riskLine->append(
-                    bestOperationTime * 1.2,
-                    riskCosts[i]);
-
-        QPen riskPen;
-        riskPen.setColor(
-                    QColor(
-                        riskColors[i]));
-
-        riskPen.setStyle(
-                    Qt::DashLine);
-
-        riskPen.setWidth(2);
-
-        riskLine->setPen(
-                    riskPen);
-
-        cost->addSeries(
-                    riskLine);
-    }
-    */
-
-    for(int i = 0; i < scenarios.size(); i++)
-    {
-        QScatterSeries *riskPoint =
-                new QScatterSeries();
-
-        riskPoint->setMarkerShape(
-                    QScatterSeries::MarkerShapeCircle);
-
-        riskPoint->setMarkerSize(16);
-
-        riskPoint->setColor(
-                    QColor(scenarios[i].color));
-
-        riskPoint->setBorderColor(Qt::white);
-
-        riskPoint->setName(
-                    scenarios[i].level);
-
-        riskPoint->append(
-                    scenarios[i].time,
-                    scenarios[i].cost / 1000000.0);
-
-        cost->addSeries(riskPoint);
-    }
-
-
-
-
-
-
-
-    //отдельная легенда для графика
-    cost->legend()->hide();
-
-    // Убираем внутренние отступы, чтобы график был вплотную к осям
-    cost->layout()->setContentsMargins(0, 0, 0, 0);
-
-    cost->createDefaultAxes();
-
-    QValueAxis *axisX =
-            qobject_cast<QValueAxis*>(cost->axisX());
-
-    QValueAxis *axisY =
-            qobject_cast<QValueAxis*>(cost->axisY());
-
-    axisX->setRange(
-                0,
-                operationResult.bestOperationTime * 1.1);
-
-
-
-
-    /*
-    double maxRiskCost = costMln;
-
-    for(const auto &s : scenarios)
-    {
-        maxRiskCost = qMax(
-                    maxRiskCost,
-                    s.cost / 1000000.0);
-    }
-    axisY->setRange(
-                0,
-                maxRiskCost * 1.15);
-*/
-    double maxY = 0.0;
-
-    for(double cost : graphCosts)
-    {
-        maxY = qMax(maxY, cost);
-    }
-
-    for(const auto &s : scenarios)
-    {
-        maxY = qMax(
-                    maxY,
-                    s.cost / 1000000.0);
-    }
-
-    axisY->setRange(
-                0,
-                maxY * 1.15);
-
-
-
-    /*
-    for(QAbstractSeries *s : cost->series())
-    {
-        s->attachAxis(
-                    cost->axisX());
-
-        s->attachAxis(
-                    cost->axisY());
-    }
-    */
-
-    cost->setTitle(
-                "Затраты операции");
-
-    QPen pen;
-    pen.setColor(QColor(0, 105, 217));  // Розовый цвет
-    pen.setWidth(3);                      // Толщина линии
-    pen.setStyle(Qt::SolidLine);          // Сплошная линия
-    series->setPen(pen);
-
-    costChart = new QChartView(cost);
-    costChart->setStyleSheet("QChartView { border: none; background: transparent; }");
-
-    QFrame *costFrame = new QFrame(this);
-    costFrame->setGeometry(0, 400, 600, 350);
-    costFrame->setStyleSheet(
-        "QFrame{"
-        "    background-color: rgba(4,14,28,120);"
-        "    border: 1px solid rgba(0,255,255,120);"
-        "    border-radius: 15px;"
-        "}"
-    );
-
-    // Используем layout для автоматического позиционирования
-    QVBoxLayout *frameLayout = new QVBoxLayout(costFrame);
-
-    QHBoxLayout *legendLayout = new QHBoxLayout;
-
-    legendLayout->setSpacing(15);
-
-   /* legendLayout->addWidget(
-        createLegendItem(
-            QColor(0, 105, 217),
-            "Рациональный парк ВС"));
-*/
-    legendLayout->addWidget(
-        createLegendItem(
-            QColor("#00ff00"),
-            "Низкий риск"));
-
-    legendLayout->addWidget(
-        createLegendItem(
-            QColor("#ffff00"),
-            "Средний риск"));
-
-    legendLayout->addWidget(
-        createLegendItem(
-            QColor("#ff8800"),
-            "Высокий риск"));
-
-    legendLayout->addWidget(
-        createLegendItem(
-            QColor("#ff0000"),
-            "Критический риск"));
-
-    frameLayout->setContentsMargins(10, 10, 10, 10);
-
-    frameLayout->addLayout(legendLayout);
-
-    frameLayout->addWidget(costChart);
-
+    chartsManager.createCharts(
+        this,
+        aircraft,
+        operationResult,
+        graphTimes,
+        graphCosts,
+        scenarios);
 
     //--------------------------------------------------
     // ТЕКСТ РЕЗУЛЬТАТОВ
@@ -3377,6 +2911,152 @@ void OilSpillWindow::createCharts()
                 'f',
                 2)
            + " млн руб.</b>";
+
+    resultPanel->setText(txt);
+
+    resultPanel->setGeometry(
+                0,
+                0,
+                600,
+                390);
+}
+
+void OilSpillWindow::updateResultPanel()
+{
+    QString txt;
+
+    txt +=
+            "<div align='center'>"
+            "<span style='font-size:24px;"
+            "font-weight:700;"
+            "color:#7ffeff;'>"
+            "Результат"
+            "</span>"
+            "</div>";
+
+    txt +=
+            "Тип акватории: "
+            + waterType
+            + "<br>";
+
+    txt +=
+            "Ограничение на время: "
+            + QString::number(timeLimit)
+            + " ч<br>";
+
+    txt +=
+            "Объём выброса нефти: "
+            + QString::number(oilVolume)
+            + " м³<br>";
+
+    txt +=
+            "Операция выполнена за: "
+            + QString::number(
+                operationResult.bestOperationTime,
+                'f',
+                1)
+            + " ч<br>";
+
+    txt +=
+            "<b>Рациональный парк</b><br>";
+
+    txt +=
+            "БПЛА: "
+            + operationResult.bestUAV
+            + " ("
+            + QString::number(
+                operationResult.bestUAVCount)
+            + ") — "
+            + QString::number(
+                operationResult.bestUAVCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "ВК: "
+            + operationResult.bestHeli
+            + " ("
+            + QString::number(
+                operationResult.bestHeliCount)
+            + ") — "
+            + QString::number(
+                operationResult.bestHeliCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "АК: "
+            + operationResult.bestPlane
+            + " ("
+            + QString::number(
+                operationResult.bestPlaneCount)
+            + ") — "
+            + QString::number(
+                operationResult.bestPlaneCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "<b>Затраты</b><br>";
+
+    txt +=
+            "Эксплуатация: "
+            + QString::number(
+                operationResult.operationCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "Топливо: "
+            + QString::number(
+                operationResult.fuelCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "Материалы: "
+            + QString::number(
+                operationResult.materialCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "Экологический риск: ";
+
+    txt +=
+            "<span style='color:"
+            + operationResult.riskColor
+            + ";'>●</span> ";
+
+    txt +=
+            operationResult.riskLevel
+            + " ("
+            + QString::number(
+                operationResult.riskValue,
+                'f',
+                1)
+            + ")";
+
+    txt +=
+            "<br><b>Итого: "
+            + QString::number(
+                operationResult.bestCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.</b>";
 
     resultPanel->setText(txt);
 
