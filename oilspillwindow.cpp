@@ -2194,57 +2194,6 @@ void OilSpillWindow::calculateOperation()
         aircraft.planeCounts.push_back(countPlane);
     }
 
-
-
-/*
-    riskTimes.clear();
-    riskValues.clear();
-
-    for(int i = 0; i < graphOperationTimes.size(); i++)
-    {
-        double t = graphOperationTimes[i];
-
-        double shoreDistance =
-                qMax(
-                    0.0,
-                    environment.distanceShore -
-                    environment.driftVelocity * t);
-
-        double shoreFactor =
-                1.0 -
-                shoreDistance /
-                environment.distanceShore;
-
-        shoreFactor =
-                qBound(0.0, shoreFactor, 1.0);
-
-        double risk =
-                (oilVolume / 1000.0)
-                *
-                shoreFactor
-                *
-                (environment.driftVelocity / 10.0)
-                *
-                environment.vulnerabilityCoefficient
-                ;
-
-        risk =
-                qBound(0.0, risk, 1.0);
-
-        riskTimes.push_back(t);
-        riskValues.push_back(risk);
-    }
-
-    scenarios.clear();
-
-    QVector<double> scenarioFractions;
-
-    scenarioFractions
-            << 0.25
-            << 0.50
-            << 0.75
-            << 1.00;
-*/
     RiskCalculationResult riskResult =
             riskCalculator.calculate(
                 oilVolume,
@@ -2319,65 +2268,6 @@ void OilSpillWindow::calculateOperation()
 
 */
 
-
-    double shoreDistanceNow =
-            qMax(
-                0.0,
-                environment.distanceShore
-                -
-                environment.driftVelocity
-                *
-                timeLimit);
-
-    double shoreFactor =
-            1.0 -
-            shoreDistanceNow /
-            environment.distanceShore;
-
-
-
-    if(shoreFactor < 0.0)
-        shoreFactor = 0.0;
-
-    if(shoreFactor > 1.0)
-        shoreFactor = 1.0;
-
-    operationResult.riskValue =
-            (oilVolume / 1000.0)
-            *
-            shoreFactor
-            *
-            (environment.driftVelocity / 10.0)
-            *
-            environment.vulnerabilityCoefficient
-           ;
-
-    if(operationResult.riskValue > 1)
-        operationResult.riskValue = 1;
-
-    if(operationResult.riskValue < 0)
-        operationResult.riskValue = 0;
-
-    if(operationResult.riskValue <= 0.25)
-    {
-        operationResult.riskLevel = "Низкий";
-        operationResult.riskColor = "#00ff55";
-    }
-    else if(operationResult.riskValue <= 0.35)
-    {
-        operationResult.riskLevel = "Средний";
-        operationResult.riskColor = "#ffff00";
-    }
-    else if(operationResult.riskValue <= 0.6)
-    {
-        operationResult.riskLevel = "Высокий";
-        operationResult.riskColor = "#ff8800";
-    }
-    else
-    {
-        operationResult.riskLevel = "Критический";
-        operationResult.riskColor = "#ff0000";
-    }
 
     //Risk for all scenarios
   /*
