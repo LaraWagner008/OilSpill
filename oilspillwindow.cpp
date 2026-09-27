@@ -2790,9 +2790,27 @@ void OilSpillWindow::createCharts()
                 1)
             + ")";
 
+    double displayedTotalCost =
+            operationResult.bestCost;
+
+    for(const RiskScenario &scenario : scenarios)
+    {
+        if(qAbs(
+                scenario.time
+                -
+                operationResult.bestOperationTime)
+                < 0.01)
+        {
+            displayedTotalCost =
+                    scenario.cost;
+
+            break;
+        }
+    }
+
     txt += "<br><b>Итого: "
            + QString::number(
-                operationResult.bestCost / 1000000.0,
+                displayedTotalCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.</b>";
@@ -2934,10 +2952,28 @@ void OilSpillWindow::updateResultPanel()
                 1)
             + ")";
 
+    double displayedTotalCost =
+            operationResult.bestCost;
+
+    for(const RiskScenario &scenario : scenarios)
+    {
+        if(qAbs(
+                scenario.time
+                -
+                operationResult.bestOperationTime)
+                < 0.01)
+        {
+            displayedTotalCost =
+                    scenario.cost;
+
+            break;
+        }
+    }
+
     txt +=
             "<br><b>Итого: "
             + QString::number(
-                operationResult.bestCost /
+                displayedTotalCost /
                 1000000.0,
                 'f',
                 2)

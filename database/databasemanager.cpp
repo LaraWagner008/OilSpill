@@ -3,6 +3,7 @@
 #include <QSqlError>
 #include <QDebug>
 #include <QSqlQuery>
+#include <QCoreApplication>
 
 DatabaseManager::DatabaseManager()
 {
@@ -24,7 +25,9 @@ bool DatabaseManager::connect()
                     "oil_connection");
 
         m_database.setDatabaseName(
-                    "D:/OilProject/OilSpillSystem/database.db");
+                    QCoreApplication::applicationDirPath()
+                    +
+                    "/data/database.db");
     }
 
     if(!m_database.open())
