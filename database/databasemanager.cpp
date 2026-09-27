@@ -105,3 +105,121 @@ OperationConstants DatabaseManager::loadOperationConstants() const
 
     return constants;
 }
+
+AircraftDatabase DatabaseManager::loadAircraftDatabase() const
+{
+    AircraftDatabase data;
+
+    if(!m_database.isOpen())
+        return data;
+
+    QSqlQuery uavQuery(m_database);
+
+    uavQuery.exec(
+                "SELECT * FROM UAVS");
+
+    while(uavQuery.next())
+    {
+        UAVData uav;
+
+        uav.id =
+                uavQuery.value(0).toInt();
+
+        uav.name =
+                uavQuery.value(1).toString();
+
+        uav.speed =
+                uavQuery.value(2).toDouble();
+
+        uav.range =
+                uavQuery.value(3).toDouble();
+
+        uav.fuelWeight =
+                uavQuery.value(4).toDouble();
+
+        uav.fuelConsumption =
+                uavQuery.value(5).toDouble();
+
+        uav.cost =
+                uavQuery.value(6).toDouble();
+
+        data.uavs.append(uav);
+    }
+
+    QSqlQuery heliQuery(m_database);
+
+    heliQuery.exec(
+                "SELECT * FROM Helicopters");
+
+    while(heliQuery.next())
+    {
+        HelicopterData heli;
+
+        heli.id =
+                heliQuery.value(0).toInt();
+
+        heli.name =
+                heliQuery.value(1).toString();
+
+        heli.speed =
+                heliQuery.value(2).toDouble();
+
+        heli.range =
+                heliQuery.value(3).toDouble();
+
+        heli.capacity =
+                heliQuery.value(4).toDouble();
+
+        heli.fuelWeight =
+                heliQuery.value(5).toDouble();
+
+        heli.fuelConsumption =
+                heliQuery.value(6).toDouble();
+
+        heli.cost =
+                heliQuery.value(7).toDouble();
+
+        data.helicopters.append(heli);
+    }
+
+    QSqlQuery planeQuery(m_database);
+
+    planeQuery.exec(
+                "SELECT * FROM Airplanes");
+
+    while(planeQuery.next())
+    {
+        AirplaneData plane;
+
+        plane.id =
+                planeQuery.value(0).toInt();
+
+        plane.name =
+                planeQuery.value(1).toString();
+
+        plane.speed =
+                planeQuery.value(2).toDouble();
+
+        plane.range =
+                planeQuery.value(3).toDouble();
+
+        plane.capacity =
+                planeQuery.value(4).toDouble();
+
+        plane.sprayWidth =
+                planeQuery.value(5).toDouble();
+
+        plane.fuelWeight =
+                planeQuery.value(6).toDouble();
+
+        plane.fuelConsumption =
+                planeQuery.value(7).toDouble();
+
+        plane.cost =
+                planeQuery.value(8).toDouble();
+
+        data.airplanes.append(plane);
+    }
+
+    return data;
+}

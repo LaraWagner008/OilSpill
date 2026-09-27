@@ -38,7 +38,8 @@ HEADERS += \
     models/riskscenario.h \
     calculations/riskcalculator.h \
     calculations/environmentcalculator.h \
-    models/operationconstants.h
+    models/operationconstants.h \
+    models/aircraftdatabase.h
 
 TARGET = OilSpillSystem
 

@@ -27,6 +27,7 @@
 #include "calculations/riskcalculator.h"
 #include "calculations/environmentcalculator.h"
 #include "models/operationconstants.h"
+#include "models/aircraftdatabase.h"
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -167,6 +168,7 @@ private:
     // результаты расчета
     //----------------------------------
     AircraftData aircraft;
+    AircraftDatabase aircraftDatabase;
 
     OperationResult operationResult;
 

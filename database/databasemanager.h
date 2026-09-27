@@ -3,6 +3,7 @@
 
 #include <QSqlDatabase>
 #include "../models/operationconstants.h"
+#include "../models/aircraftdatabase.h"
 
 class DatabaseManager
 {
@@ -12,6 +13,7 @@ public:
     bool connect();
     QSqlDatabase database() const;
     OperationConstants loadOperationConstants() const;
+    AircraftDatabase loadAircraftDatabase() const;
 
 private:
     QSqlDatabase m_database;

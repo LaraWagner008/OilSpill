@@ -718,7 +718,8 @@ void OilSpillWindow::calculateOperation()
     // перебор всех вариантов
     //--------------------------------------------------
 
-    QSqlQuery uavs(databaseManager.database());
+    aircraftDatabase =
+            databaseManager.loadAircraftDatabase();
 
 /*
     uavNames.clear();
@@ -754,9 +755,6 @@ void OilSpillWindow::calculateOperation()
 
     for(int t = 1; t <= ceil(timeLimit); t++)
     {
-
-        uavs.exec(
-                    "SELECT * FROM UAVS");
 
         double localBestCost = 1e100;
 
@@ -807,28 +805,28 @@ void OilSpillWindow::calculateOperation()
                         << "BETA"
                         << beta;
 
-    while(uavs.next())
+    for(const UAVData &uav : aircraftDatabase.uavs)
     {
         int idUAV =
-                uavs.value(0).toInt();
+                uav.id;
 
         QString uavName =
-                uavs.value(1).toString();
+                uav.name;
 
         double vUAV =
-                uavs.value(2).toDouble();
+                uav.speed;
 
         double rangeUAV =
-                uavs.value(3).toDouble();
+                uav.range;
 
         double fuelWeightUAV =
-                uavs.value(4).toDouble();
+                uav.fuelWeight;
 
         double fuelConsumptionUAV =
-                uavs.value(5).toDouble();
+                uav.fuelConsumption;
 
         double costUAV =
-                uavs.value(6).toDouble();
+                uav.cost;
 
         double fuelPriceUAV =
                 operationConstants.fuelPriceUAV;
@@ -941,36 +939,31 @@ void OilSpillWindow::calculateOperation()
         // ВЕРТОЛЕТЫ
         //--------------------------------------------------
 
-        QSqlQuery helis(databaseManager.database());
-
-        helis.exec(
-                    "SELECT * FROM Helicopters");
-
-        while(helis.next())
+        for(const HelicopterData &heli : aircraftDatabase.helicopters)
         {
             int idHeli =
-                    helis.value(0).toInt();
+                    heli.id;
 
             QString heliName =
-                    helis.value(1).toString();
+                    heli.name;
 
             double vHeli =
-                    helis.value(2).toDouble();
+                    heli.speed;
 
             double rangeHeli =
-                    helis.value(3).toDouble();
+                    heli.range;
 
             double capacityHeli =
-                    helis.value(4).toDouble();
+                    heli.capacity;
 
             double fuelWeightHeli =
-                    helis.value(5).toDouble();
+                    heli.fuelWeight;
 
             double fuelConsumptionHeli =
-                    helis.value(6).toDouble();
+                    heli.fuelConsumption;
 
             double costHeli =
-                    helis.value(7).toDouble();
+                    heli.cost;
 
             double fuelPriceHeli =
                     operationConstants.fuelPriceHeli;
@@ -1031,39 +1024,34 @@ void OilSpillWindow::calculateOperation()
             // САМОЛЕТЫ
             //--------------------------------------------------
 
-            QSqlQuery planes(databaseManager.database());
-
-            planes.exec(
-                        "SELECT * FROM Airplanes");
-
-            while(planes.next())
+            for(const AirplaneData &plane : aircraftDatabase.airplanes)
             {
                 int idPlane =
-                        planes.value(0).toInt();
+                        plane.id;
 
                 QString planeName =
-                        planes.value(1).toString();
+                        plane.name;
 
                 double vPlane =
-                        planes.value(2).toDouble();
+                        plane.speed;
 
                 double rangePlane =
-                        planes.value(3).toDouble();
+                        plane.range;
 
                 double capacityPlane =
-                        planes.value(4).toDouble();
+                        plane.capacity;
 
                 double sprayWidth =
-                        planes.value(5).toDouble();
+                        plane.sprayWidth;
 
                 double fuelWeightPlane =
-                        planes.value(6).toDouble();
+                        plane.fuelWeight;
 
                 double fuelConsumptionPlane =
-                        planes.value(7).toDouble();
+                        plane.fuelConsumption;
 
                 double costPlane =
-                        planes.value(8).toDouble();
+                        plane.cost;
 
                 double fuelPricePlane =
                         operationConstants.fuelPricePlane;
@@ -1807,23 +1795,21 @@ void OilSpillWindow::calculateOperation()
         }
     }
 
-    QSqlQuery uavsChart(databaseManager.database());
+    //второй расччет
+    for(const UAVData &uav : aircraftDatabase.uavs)
+    {    
 
-    uavsChart.exec("SELECT * FROM UAVs");
-
-    while(uavsChart.next())
-    {
         QString uavName =
-                uavsChart.value(1).toString();
+                uav.name;
 
         double vUAV =
-                uavsChart.value(2).toDouble();
+                uav.speed;
 
         double fuelConsumptionUAV =
-                uavsChart.value(5).toDouble();
+                uav.fuelConsumption;
 
         double costUAV =
-                uavsChart.value(6).toDouble();
+                uav.cost;
 
         double fuelPriceUAV =
                 operationConstants.fuelPriceUAV;
@@ -1895,7 +1881,7 @@ void OilSpillWindow::calculateOperation()
                 );
 
         double searchLengthOneUAV =
-                uavsChart.value(3).toDouble()
+                uav.range
                 -
                 2.0 *
                 environment.distanceBase;
@@ -1974,26 +1960,23 @@ void OilSpillWindow::calculateOperation()
         aircraft.uavCounts.push_back(countUAV);
     }
 
-    QSqlQuery helisChart(databaseManager.database());
-
-    helisChart.exec("SELECT * FROM Helicopters");
-
-    while(helisChart.next())
+    for(const HelicopterData &heli : aircraftDatabase.helicopters)
     {
+
         QString heliName =
-                helisChart.value(1).toString();
+                heli.name;
 
         double vHeli =
-                helisChart.value(2).toDouble();
+                heli.speed;
 
         double capacityHeli =
-                helisChart.value(4).toDouble();
+                heli.capacity;
 
         double fuelConsumptionHeli =
-                helisChart.value(6).toDouble();
+                heli.fuelConsumption;
 
         double costHeli =
-                helisChart.value(7).toDouble();
+                heli.cost;
 
         double  fuelPriceHeli=
                 operationConstants.fuelPriceHeli;
@@ -2070,29 +2053,26 @@ void OilSpillWindow::calculateOperation()
         aircraft.heliCounts.push_back(countHeli);
     }
 
-    QSqlQuery planesChart(databaseManager.database());
-
-    planesChart.exec("SELECT * FROM Airplanes");
-
-    while(planesChart.next())
+    for(const AirplaneData &plane : aircraftDatabase.airplanes)
     {
+
         QString planeName =
-                planesChart.value(1).toString();
+                plane.name;
 
         double vPlane =
-                planesChart.value(2).toDouble();
+                plane.speed;
 
         double capacityPlane =
-                planesChart.value(4).toDouble();
+                plane.capacity;
 
         double sprayWidth =
-                planesChart.value(5).toDouble();
+                plane.sprayWidth;
 
         double fuelConsumptionPlane =
-                planesChart.value(7).toDouble();
+                plane.fuelConsumption;
 
         double costPlane =
-                planesChart.value(8).toDouble();
+                plane.cost;
 
         double  fuelPricePlane=
                 operationConstants.fuelPricePlane;
