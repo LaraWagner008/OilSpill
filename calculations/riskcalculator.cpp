@@ -205,8 +205,16 @@ RiskCalculationResult RiskCalculator::calculate(
         s.planeCount =
                 graphPlaneCounts[bestScenarioIndex];
 
-        s.risk =
-                result.riskValues[bestScenarioIndex];
+        if(fraction >= 1.0)
+        {
+            s.risk =
+                    result.riskValue;
+        }
+        else
+        {
+            s.risk =
+                    result.riskValues[bestScenarioIndex];
+        }
 
         if(s.risk <= 0.25)
         {

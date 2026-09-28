@@ -148,21 +148,6 @@ private:
     double minThickness;
     double kSpread;
     double initialThickness;
-/*
-    double oilThickness;
-    double currentArea;
-    double maxArea;
-    double perimeter;
-    bool spreadingFinished;
-    double worldX;
-    double worldY;
-*/
-    //----------------------------------
-    // координаты
-    //----------------------------------
-
-//    double cameraX;
-  //  double cameraY;
 
     //----------------------------------
     // результаты расчета
