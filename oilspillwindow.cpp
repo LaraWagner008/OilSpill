@@ -7,7 +7,6 @@
 #include <QPainter>
 #include <QtCharts>
 
-#include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlRecord>
@@ -45,29 +44,31 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     this->waterType = waterType;
     this->timeLimit = timeLimit;
     this->oilVolume = oilVolume;
-    bestCost = 1e18;
-    connectDatabase();
+    operationResult.bestCost = 1e18;
+    databaseManager.connect();
+
+    minThickness = 0.001;
 
     loadConditions();
-    bestUAVCount = 0;
-    bestHeliCount = 0;
-    bestPlaneCount = 0;
+    operationResult.bestUAVCount = 0;
+    operationResult.bestHeliCount = 0;
+    operationResult.bestPlaneCount = 0;
 
-    bestUAVId = -1;
-    bestHeliId = -1;
-    bestPlaneId = -1;
+    operationResult.bestUAVId = -1;
+    operationResult.bestHeliId = -1;
+    operationResult.bestPlaneId = -1;
 
-    bestUAVOperationCost = 0;
-    bestHeliOperationCost = 0;
-    bestPlaneOperationCost = 0;
+    operationResult.bestUAVOperationCost = 0;
+    operationResult.bestHeliOperationCost = 0;
+    operationResult.bestPlaneOperationCost = 0;
 
-    bestUAVFuelCost = 0;
-    bestHeliFuelCost = 0;
-    bestPlaneFuelCost = 0;
+    operationResult.bestUAVFuelCost = 0;
+    operationResult.bestHeliFuelCost = 0;
+    operationResult.bestPlaneFuelCost = 0;
 
-    operationCost = 0;
-    fuelCost = 0;
-    materialCost = 0;
+    operationResult.operationCost = 0;
+    operationResult.fuelCost = 0;
+    operationResult.materialCost = 0;
 
     setRenderHint(QPainter::Antialiasing);
     setRenderHint(QPainter::SmoothPixmapTransform);
@@ -87,60 +88,6 @@ OilSpillWindow::OilSpillWindow(QString waterType,
                 );
 
     // =====================================================
-    // ПАРАМЕТРЫ
-    // =====================================================
-
-
-
-    minThickness = 0.001;
-
-    // =====================================================
-    // DRIFT
-    // =====================================================
-
-    double sx =
-            vCurrent * sin(degToRad(dCurrent))
-            +
-            kWind * vWind * sin(degToRad(dWind));
-
-    double sy =
-            vCurrent * cos(degToRad(dCurrent))
-            +
-            kWind * vWind * cos(degToRad(dWind));
-
-    driftVelocity =
-            sqrt(sx*sx + sy*sy);
-
-    driftAngle =
-            atan2(sy,sx);
-
-
-
-    // =====================================================
-    // AREA
-    // =====================================================
-
-
-    currentArea =
-            oilVolume /
-            (initialThickness * 1e-3);
-
-    // Smax = V / hmin
-
-    maxArea =
-            oilVolume /
-            (minThickness * 1e-3);
-
-    oilThickness =
-            initialThickness;
-
-    // perimeter
-
-    perimeter =
-            2 * M_PI *
-            sqrt(currentArea / M_PI);
-
-    // =====================================================
     // SCENE
     // =====================================================
 
@@ -154,50 +101,16 @@ OilSpillWindow::OilSpillWindow(QString waterType,
                 400000,
                 400000);
 
-    worldX = 0;
-    worldY = 0;
+    oilScene =
+            new OilSimulationScene(
+                scene,
+                &oilSimulation);
 
-    cameraX = 0;
-    cameraY = 0;
+    operationResult.bestCost = 1e100;
 
-    spreadingFinished = false;
-    bestCost = 1e100;
-
-    bestUAVCost = 1e100;
-    bestHeliCost = 1e100;
-    bestPlaneCost = 1e100;
-    // =====================================================
-    // PARTICLES
-    // =====================================================
-
-
-    int particleCount =
-            qBound(
-                300,
-                int(oilVolume * 4),
-                3000);
-
-    //for(int i=0; i<950; i++)
-    for(int i=0; i<particleCount; i++)
-    {
-        double angle =
-                degToRad(qrand()%360);
-
-        // меньше радиус -> компактное круглое пятно
-
-        double radius =
-                qSqrt(qrand()%1000) * 1.8;
-
-        OilParticle p;
-
-        p.x = cos(angle) * radius;
-        p.y = sin(angle) * radius;
-
-        p.vx = 0;
-        p.vy = 0;
-
-        particles.push_back(p);
-    }
+    operationResult.bestUAVCost = 1e100;
+    operationResult.bestHeliCost = 1e100;
+    operationResult.bestPlaneCost = 1e100;
 
     // =====================================================
     // HUD PANEL
@@ -232,6 +145,11 @@ OilSpillWindow::OilSpillWindow(QString waterType,
                 "}"
 
                 );
+    hudRenderer =
+            new HUDRenderer(
+                hud,
+                &oilSimulation);
+
     //--------------------------------------------------
     // РЕЗУЛЬТАТЫ
     //--------------------------------------------------
@@ -254,10 +172,6 @@ OilSpillWindow::OilSpillWindow(QString waterType,
     resultPanel->setText(
                 "Расчет не выполнен");
 
-
-
-
-
     // =====================================================
     // TIMER
     // =====================================================
@@ -270,11 +184,15 @@ OilSpillWindow::OilSpillWindow(QString waterType,
             &OilSpillWindow::updateSimulation);
 
     timer->start(33);
-    bestCost = 1e30;
+
+    qDebug() << "Simulation timer started";
+
+    operationResult.bestCost = 1e30;
 
     calculateOperation();
 
     createCharts();
+    updateResultPanel();
 }
 
 double OilSpillWindow::degToRad(double deg)
@@ -282,297 +200,23 @@ double OilSpillWindow::degToRad(double deg)
     return deg * M_PI / 180.0;
 }
 
-void OilSpillWindow::drawWater()
-{
-    scene->clear();
 
-    // =====================================================
-    // WATER
-    // =====================================================
-
-    QLinearGradient water(
-                -10000,
-                -10000,
-                10000,
-                10000);
-
-    water.setColorAt(
-                0.0,
-                QColor(1,18,38));
-
-    water.setColorAt(
-                0.45,
-                QColor(5,48,88));
-
-    water.setColorAt(
-                1.0,
-                QColor(1,10,24));
-
-    scene->addRect(
-                scene->sceneRect(),
-                QPen(Qt::NoPen),
-                QBrush(water));
-
-    // =====================================================
-    // GRID
-    // =====================================================
-
-    QPen grid(
-                QColor(0,255,255,23));
-
-    for(int x=-200000; x<200000; x+=250)
-    {
-        scene->addLine(
-                    x,-200000,
-                    x,200000,
-                    grid);
-    }
-
-    for(int y=-200000; y<200000; y+=250)
-    {
-        scene->addLine(
-                    -200000,y,
-                    200000,y,
-                    grid);
-    }
-
-    // =====================================================
-    // HUD CORNERS
-    // =====================================================
-
-    QPen corner(
-                QColor(0,255,255,26));
-
-    corner.setWidth(2);
-
-    for(int i=-200000; i<200000; i+=1500)
-    {
-        scene->addLine(
-                    i,
-                    -200000,
-                    i+80,
-                    -199920,
-                    corner);
-    }
-}
-
-void OilSpillWindow::drawOil()
-{
-    // =================================================
-    // MAIN OIL SILHOUETTE
-    // =================================================
-
-    for(int i=0; i<particles.size(); i++)
-    {
-        OilParticle &p = particles[i];
-
-        // OUTER CYAN GLOW
-
-        QRadialGradient glow(
-                    p.x,
-                    p.y,
-                    110);
-
-        glow.setColorAt(
-                    0.0,
-                    QColor(0,255,220,10));
-
-        glow.setColorAt(
-                    0.5,
-                    QColor(0,255,220,5));
-
-        glow.setColorAt(
-                    1.0,
-                    QColor(0,0,0,0));
-
-        scene->addEllipse(
-                    p.x-110,
-                    p.y-110,
-                    220,
-                    220,
-                    QPen(Qt::NoPen),
-                    QBrush(glow));
-
-        // MAIN OIL BODY
-
-        QRadialGradient oil(
-                    p.x,
-                    p.y,
-                    75);
-
-        oil.setColorAt(
-                    0.0,
-                    QColor(6,8,8,20));
-
-        oil.setColorAt(
-                    0.55,
-                    QColor(12,18,16,10));
-
-        oil.setColorAt(
-                    0.82,
-                    QColor(0,255,140,28));
-
-        oil.setColorAt(
-                    1.0,
-                    QColor(0,0,0,0));
-
-        scene->addEllipse(
-                    p.x-75,
-                    p.y-75,
-                    150,
-                    150,
-                    QPen(Qt::NoPen),
-                    QBrush(oil));
-    }
-}
-
-void OilSpillWindow::drawHUD()
-{
-    QString text;
-
-    text +=
-            "<div align='center'>"
-            "<span style='font-size:22px;"
-            "font-weight:700;"
-            "color:#7ffeff;'>"
-            "ПАРАМЕТРЫ РАЗЛИВА"
-            "</span>"
-            "</div><br>";
-
-    text +=
-            "≋ Скорость дрейфа<br>"
-            "<b>"
-            + QString::number(
-                driftVelocity,
-                'f',
-                2)
-            + " км/ч</b><br><br>";
-
-    text +=
-            "➤ Направление<br>"
-            "<b>"
-            + QString::number(
-                driftAngle*180/M_PI,
-                'f',
-                1)
-            + "°</b><br><br>";
-
-    text +=
-            "⌖ Координаты<br>"
-            "<b>X: "
-            + QString::number(worldX,'f',1)
-            + "<br>Y: "
-            + QString::number(worldY,'f',1)
-            + "</b><br><br>";
-
-    text +=
-            "⬒ Площадь<br>"
-            "<b>"
-            + QString::number(
-                currentArea/1000000.0,
-                'f',
-                2)
-            + " км²</b><br><br>";
-
-    text +=
-            "◌ Толщина плёнки<br>"
-            "<b>"
-            + QString::number(
-                oilThickness,
-                'f',
-                4)
-            + " мм</b><br><br>";
-
-    text +=
-            "◎ Периметр<br>"
-            "<b>"
-            + QString::number(
-                perimeter/1000.0,
-                'f',
-                2)
-            + " км</b>";
-
-    hud->setText(text);
-}
 
 void OilSpillWindow::drawScene()
 {
-    drawWater();
+    oilScene->drawWater();
+    oilScene->drawOil();
 
-    drawOil();
-
-    drawHUD();
+    hudRenderer->draw(
+                environment.driftVelocity,
+                environment.driftAngle);
 
     // =====================================================
     // SMART CAMERA
     // =====================================================
-
-    double minX = 999999;
-    double maxX = -999999;
-
-    double minY = 999999;
-    double maxY = -999999;
-
-    for(int i=0; i<particles.size(); i++)
-    {
-        OilParticle &p = particles[i];
-
-        if(p.x < minX) minX = p.x;
-        if(p.x > maxX) maxX = p.x;
-
-        if(p.y < minY) minY = p.y;
-        if(p.y > maxY) maxY = p.y;
-    }
-
-    double oilWidth =
-            maxX - minX;
-
-    double oilHeight =
-            maxY - minY;
-
-    double oilCenterX =
-            (minX + maxX)/2.0;
-
-    double oilCenterY =
-            (minY + maxY)/2.0;
-
-    // LOOK AHEAD
-
-    double lookAhead = 340;
-
-    double targetX =
-            oilCenterX
-            +
-            cos(driftAngle)
-            * lookAhead;
-
-    double targetY =
-            oilCenterY
-            +
-            sin(driftAngle)
-            * lookAhead;
-
-    // SOFT CAMERA
-
-    cameraX +=
-            (targetX - cameraX)
-            * 0.03;
-
-    cameraY +=
-            (targetY - cameraY)
-            * 0.03;
-
-    // KEEP OIL IN SCREEN
-
-    fitInView(
-                QRectF(
-                    minX-700,
-                    minY-700,
-                    oilWidth+1400,
-                    oilHeight+1400),
-                Qt::KeepAspectRatio);
-
-    centerOn(cameraX,cameraY);
+    oilScene->updateCamera(
+                this,
+                environment.driftAngle);
 
     viewport()->update();
 }
@@ -580,136 +224,9 @@ void OilSpillWindow::drawScene()
 void OilSpillWindow::updateSimulation()
 {
     double simulationSpeed = 5.0;
-    // =====================================================
-    // AREA GROWTH
-    // =====================================================
 
-    if(!spreadingFinished)
-    {
-        // =====================================================
-        // MODEL TIME
-        // =====================================================
-
-        // шаг модельного времени (часы)
-
-        double dt = 0.05 * simulationSpeed;
-
-        // =====================================================
-        // S(t)=S0+PI*k*t
-        // kSpread -> км²/ч
-        // currentArea -> м²
-        // =====================================================
-
-        currentArea +=
-                M_PI *
-                kSpread *
-                1000000.0 *
-                dt;
-
-        if(currentArea >= maxArea)
-        {
-            currentArea = maxArea;
-
-            spreadingFinished = true;
-        }
-
-        // h(t)=V/S(t)
-
-        oilThickness =
-                oilVolume /
-                (currentArea * 1e-3);
-
-        if(oilThickness < minThickness)
-            oilThickness = minThickness;
-
-        perimeter =
-                2 * M_PI *
-                sqrt(currentArea / M_PI);
-    }
-
-    // =====================================================
-    // WORLD DRIFT
-    // =====================================================
-
-    worldX +=
-            cos(driftAngle)
-            * driftVelocity
-            * 1.15 * simulationSpeed;
-
-    worldY +=
-            sin(driftAngle)
-            * driftVelocity
-            * 1.15 * simulationSpeed;
-
-    // =====================================================
-    // PARTICLES
-    // =====================================================
-
-    for(int i=0; i<particles.size(); i++)
-    {
-        OilParticle &p = particles[i];
-
-        if(!spreadingFinished)
-        {
-            double ang =
-                    degToRad(
-                        qrand()%360);
-
-            // более мягкое растекание
-
-            double spread =
-                    0.08 +
-                    (qrand()%100)/900.0;
-
-            p.vx +=
-                    cos(ang)
-                    * spread;
-
-            p.vy +=
-                    sin(ang)
-                    * spread;
-
-            // влияние дрейфа
-
-            p.vx +=
-                    cos(driftAngle)
-                    * 0.05;
-
-            p.vy +=
-                    sin(driftAngle)
-                    * 0.05;
-        }
-        else
-        {
-            // после достижения min thickness
-            // пятно в основном дрейфует
-
-            p.vx +=
-                    cos(driftAngle)
-                    * 0.03;
-
-            p.vy +=
-                    sin(driftAngle)
-                    * 0.03;
-        }
-
-        p.vx *= 0.988;
-        p.vy *= 0.988;
-
-        p.x += p.vx;
-        p.y += p.vy;
-
-        p.x +=
-                cos(driftAngle)
-                * driftVelocity
-                * 0.65 * simulationSpeed;
-
-        p.y +=
-                sin(driftAngle)
-                * driftVelocity
-                * 0.65 * simulationSpeed;
-    }
-
+    oilSimulation.update(
+                simulationSpeed);
     drawScene();
 }
 
@@ -720,6 +237,7 @@ void OilSpillWindow::paintEvent(QPaintEvent *event)
     // =====================================================
     // FIXED HUD RETICLE
     // =====================================================
+
     QPainter p(viewport());
 
     p.setRenderHint(QPainter::Antialiasing);
@@ -793,7 +311,7 @@ void OilSpillWindow::paintEvent(QPaintEvent *event)
     // direction marker
 
     double dir =
-            driftAngle;
+            environment.driftAngle;
 
     QPointF arrow1(
                 cx + cos(dir)*52,
@@ -824,40 +342,10 @@ void OilSpillWindow::paintEvent(QPaintEvent *event)
                 2,
                 2);
 }
-//=====================================================
-// SQLITE
-//=====================================================
-
-void OilSpillWindow::connectDatabase()
-{
-    if(QSqlDatabase::contains("oil_connection"))
-    {
-        db =
-                QSqlDatabase::database(
-                    "oil_connection");
-    }
-    else
-    {
-        db =
-                QSqlDatabase::addDatabase(
-                    "QSQLITE",
-                    "oil_connection");
-
-        db.setDatabaseName(
-                    "D:/OilProject/OilSpillSystem/database.db");
-    }
-
-    if(!db.open())
-    {
-        qDebug()
-                << db.lastError().text();
-    }
-
-}
 
 void OilSpillWindow::loadConditions()
 {
-    if(!db.isOpen())
+    if(!databaseManager.database().isOpen())
         return;
 
     int waterId = 1;
@@ -869,15 +357,7 @@ void OilSpillWindow::loadConditions()
         waterId = 3;
 
 
-    QSqlQuery q(db);
-/*
-    q.prepare(
-        "SELECT * "
-        "FROM Conditions "
-        "WHERE ID_Water=?");
-
-
-    */
+    QSqlQuery q(databaseManager.database());
 
     q.prepare(
         "SELECT "
@@ -911,63 +391,22 @@ void OilSpillWindow::loadConditions()
 
         return;
     }
-/*
-    vCurrent =
-            q.value(2).toDouble();
-
-    dCurrent =
-            q.value(3).toDouble();
-
-    vWind =
-            q.value(4).toDouble();
-
-    dWind =
-            q.value(5).toDouble();
-
-    kWind =
-            q.value(6).toDouble();
-
-    initialThickness =
-            q.value(7).toDouble();
-    qDebug()
-            << "Thickness from DB ="
-            << initialThickness;
-
-    kSpread =
-            q.value(8).toDouble();
-
-    distanceShore =
-            q.value(9).toDouble();
-
-    distanceBase =
-            q.value(10).toDouble();
-
-    vulnerabilityCoefficient =
-            q.value(11).toDouble();
-
-    qDebug()
-            << "Conditions loaded:"
-            << waterType
-            << vCurrent
-            << vWind
-            << initialThickness;
-*/
 
     QSqlRecord rec = q.record();
 
-    vCurrent =
+    environment.vCurrent =
             q.value(rec.indexOf("Flow_speed")).toDouble();
 
-    dCurrent =
+    environment.dCurrent =
             q.value(rec.indexOf("Flow_direction")).toDouble();
 
-    vWind =
+    environment.vWind =
             q.value(rec.indexOf("Wind_speed")).toDouble();
 
-    dWind =
+    environment.dWind =
             q.value(rec.indexOf("Wind_direction")).toDouble();
 
-    kWind =
+    environment.kWind =
             q.value(rec.indexOf("Wind_coefficient")).toDouble();
 
     initialThickness =
@@ -976,47 +415,52 @@ void OilSpillWindow::loadConditions()
     kSpread =
             q.value(rec.indexOf("Surface_coefficient")).toDouble();
 
-    distanceShore =
+    environment.distanceShore =
             q.value(rec.indexOf("Distance_shore")).toDouble();
 
-    distanceBase =
+    environment.distanceBase =
             q.value(rec.indexOf("Distance_base")).toDouble();
 
-    vulnerabilityCoefficient =
+    environment.vulnerabilityCoefficient =
             q.value(rec.indexOf("Vulnerability_coefficient")).toDouble();
 
-    double sx =
-            vCurrent * sin(degToRad(dCurrent))
-            +
-            kWind * vWind * sin(degToRad(dWind));
+    EnvironmentCalculationResult environmentResult =
+            environmentCalculator.calculate(
+                environment.vCurrent,
+                environment.dCurrent,
+                environment.vWind,
+                environment.dWind,
+                environment.kWind);
 
-    double sy =
-            vCurrent * cos(degToRad(dCurrent))
-            +
-            kWind * vWind * cos(degToRad(dWind));
+    environment.driftVelocity =
+            environmentResult.driftVelocity;
 
-    driftVelocity =
-            sqrt(sx * sx + sy * sy);
+    environment.driftAngle =
+            environmentResult.driftAngle;
 
-    driftAngle =
-            atan2(sy, sx);
-
+    oilSimulation.initialize(
+                oilVolume,
+                initialThickness,
+                minThickness,
+                kSpread,
+                environment.driftVelocity,
+                environment.driftAngle);
 }
-
 
 
 double OilSpillWindow::calculateSearchArea()
 {
-    return currentArea * 1.25;
+    return oilSimulation.currentArea() * 1.25;
 }
+
 QVector<double> riskCosts;
 QVector<QString> riskColors;
 void OilSpillWindow::calculateOperation()
 {
 
     double maxPhysicalTime =
-            distanceShore /
-            driftVelocity;
+            environment.distanceShore /
+            environment.driftVelocity;
 
     if(timeLimit > maxPhysicalTime)
     {
@@ -1035,121 +479,79 @@ void OilSpillWindow::calculateOperation()
         return;
     }
 
-    /*
-// надолго так не оставлять, пока открыто для рисков
-    double tDetect =
-            0.3 * timeLimit;
-
-    double tLiquid =
-            0.7 * timeLimit;
-
-*/
-    if(!db.isOpen())
+    if(!databaseManager.database().isOpen())
         return;
 
-    searchArea =
+    operationResult.searchArea =
             calculateSearchArea();
 
     //--------------------------------------------------
     // Константы
     //--------------------------------------------------
 
-    QSqlQuery c(db);
-
-    c.exec("SELECT * FROM ConstData");
-    qDebug() << "ConstData exec =" << c.lastError().text();
-
-    if(!c.next())
-    {
-        qDebug() << "ConstData EMPTY";
-        return;
-    }
+    operationConstants =
+            databaseManager.loadOperationConstants();
 
     double viewingAngle =
-            c.value(1).toDouble();
+            operationConstants.viewingAngle;
 
     double flightHeight =
-            c.value(2).toDouble();
+            operationConstants.flightHeight;
 
     double loadingTime =
-            c.value(3).toDouble();
+            operationConstants.loadingTime;
 
     double weightBooms =
-            c.value(4).toDouble();
+            operationConstants.weightBooms;
 
     double sprayRate =
-            c.value(5).toDouble();
+            operationConstants.sprayRate;
 
     double density =
-            c.value(6).toDouble();
+            operationConstants.density;
 
     double boomSpeed =
-            c.value(7).toDouble();
-
-    /*
-    double fuelPrice =
-            c.value(8).toDouble();*/
+            operationConstants.boomSpeed;
 
     double boomPrice =
-            c.value(8).toDouble();
+            operationConstants.boomPrice;
 
     double dispersantPrice =
-            c.value(9).toDouble();
+            operationConstants.dispersantPrice;
 
     //--------------------------------------------------
     // масса нефти
     //--------------------------------------------------
 
-    oilMass =
+    operationResult.oilMass =
             oilVolume *
             density;
 
-    boomsMass =
-            perimeter / 1000.0 *
+    operationResult.boomsMass =
+            oilSimulation.perimeter() / 1000.0 *
             weightBooms;
 
-    uavNames.clear();
-    uavCosts.clear();
-    uavCounts.clear();
+    aircraft.uavNames.clear();
+    aircraft.uavCosts.clear();
+    aircraft.uavCounts.clear();
 
-    heliNames.clear();
-    heliCosts.clear();
-    heliCounts.clear();
+    aircraft.heliNames.clear();
+    aircraft.heliCosts.clear();
+    aircraft.heliCounts.clear();
 
-    planeNames.clear();
-    planeCosts.clear();
-    planeCounts.clear();
+    aircraft.planeNames.clear();
+    aircraft.planeCosts.clear();
+    aircraft.planeCounts.clear();
 
     //--------------------------------------------------
     // перебор всех вариантов
     //--------------------------------------------------
 
-    QSqlQuery uavs(db);
+    aircraftDatabase =
+            databaseManager.loadAircraftDatabase();
 
-/*
-    uavNames.clear();
-    uavCosts.clear();
-    uavCounts.clear();
+    operationResult.bestCost = 1e100;
 
-    heliNames.clear();
-    heliCosts.clear();
-    heliCounts.clear();
-
-    planeNames.clear();
-    planeCosts.clear();
-    planeCounts.clear();
-*/
-    bestCost = 1e100;
-
-/*
-    QString bestUAV;
-    QString bestHeli;
-    QString bestPlane;
-
-    double bestCountUAV = 0;
-    double bestCountHeli = 0;
-    double bestCountPlane = 0;
-*/
     graphTimes.clear();
     graphCosts.clear();
     graphUAVCounts.clear();
@@ -1160,9 +562,6 @@ void OilSpillWindow::calculateOperation()
 
     for(int t = 1; t <= ceil(timeLimit); t++)
     {
-
-        uavs.exec(
-                    "SELECT * FROM UAVS");
 
         double localBestCost = 1e100;
 
@@ -1179,15 +578,7 @@ void OilSpillWindow::calculateOperation()
 
         double bestLocalEpsilon = 0.0;
         double bestLocalBeta = 0.0;
-        //double beta = 0.0;
 
-        /*
-        double tDetect =
-                0.3 * t;
-
-        double tLiquid =
-                0.7 * t;
-        */
         for(double epsilon = 0.1;
             epsilon <= 0.9;
             epsilon += 0.1)
@@ -1213,137 +604,82 @@ void OilSpillWindow::calculateOperation()
                         << "BETA"
                         << beta;
 
-    while(uavs.next())
+    for(const UAVData &uav : aircraftDatabase.uavs)
     {
         int idUAV =
-                uavs.value(0).toInt();
+                uav.id;
 
         QString uavName =
-                uavs.value(1).toString();
+                uav.name;
 
         double vUAV =
-                uavs.value(2).toDouble();
+                uav.speed;
 
         double rangeUAV =
-                uavs.value(3).toDouble();
+                uav.range;
 
         double fuelWeightUAV =
-                uavs.value(4).toDouble();
+                uav.fuelWeight;
 
         double fuelConsumptionUAV =
-                uavs.value(5).toDouble();
+                uav.fuelConsumption;
 
         double costUAV =
-                uavs.value(6).toDouble();
+                uav.cost;
 
         double fuelPriceUAV =
-                c.value(7).toDouble();
+                operationConstants.fuelPriceUAV;
 
         //--------------------------------------------------
         // производительность БПЛА
         //--------------------------------------------------
 
-       /* double stripWidth =
-                2.0 *
-                (flightHeight * 1000.0) *
-                tan(
-                    degToRad(
-                        viewingAngle/2.0));
-
-        double qUAV =
-                vUAV *
-                stripWidth;*/
-
+        UAVCalculationResult uavResult =
+                uavCalculator.calculate(
+                    environment.driftVelocity,
+                    tDetect,
+                    flightHeight,
+                    viewingAngle,
+                    rangeUAV,
+                    environment.distanceBase,
+                    vUAV,
+                    fuelWeightUAV,
+                    fuelConsumptionUAV,
+                    costUAV,
+                    fuelPriceUAV);
 
         double tFlightUAV =
-                fuelWeightUAV /
-                fuelConsumptionUAV;
+                uavResult.flightTime;
 
         double searchRadius =
-                driftVelocity *
-                tDetect;
+                uavResult.searchRadius;
 
         double stripWidth =
-                2.0 *
-                flightHeight *
-                tan(
-                    degToRad(
-                        viewingAngle / 2.0));
+                uavResult.stripWidth;
 
         double thetaSpiral =
-                (2.0 * M_PI * searchRadius)
-                /
-                stripWidth;
+                uavResult.thetaSpiral;
 
         double totalSearchLength =
-                (stripWidth /
-                 (4.0 * M_PI))
-                *
-                (
-                    thetaSpiral *
-                    sqrt(
-                        1.0 +
-                        thetaSpiral *
-                        thetaSpiral)
-                    +
-                    log(
-                        thetaSpiral +
-                        sqrt(
-                            1.0 +
-                            thetaSpiral *
-                            thetaSpiral))
-                );
+                uavResult.totalSearchLength;
 
         double searchLengthOneUAV =
-                rangeUAV
-                -
-                2.0 *
-                distanceBase;
-
-        double searchAreaKm2 =
-                searchArea / 1000000.0;
-
+                uavResult.searchLengthOneUAV;
 
         double nFlightsUAV =
-                ceil(
-                    totalSearchLength
-                    /
-                    searchLengthOneUAV);
-
-
-       /* double nFlightsUAV =
-                searchArea /
-                (qUAV * tFlightUAV);
-        double tFlightMission =
-                2.0*distanceBase /vUAV +
-                searchArea/qUAV;*/
-
+                uavResult.flightsCount;
 
         double tFlightMission =
-                (
-                    searchLengthOneUAV
-                    +
-                    2.0 *
-                    distanceBase
-                )
-                /
-                vUAV;
-
-
-
+                uavResult.flightMissionTime;
 
         double countUAV =
-                ceil(
-                    nFlightsUAV *
-                    tFlightMission /
-                    tDetect);
+                uavResult.uavCount;
 
         double nFlightsPerUAV =
-        ceil(nFlightsUAV / countUAV);
+                uavResult.flightsPerUAV;
 
         int tRealUAV =
-        nFlightsPerUAV *
-        tFlightMission;
+                uavResult.realUAVTime;
 
         qDebug()
         << "ТУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУТ"
@@ -1358,9 +694,9 @@ void OilSpillWindow::calculateOperation()
            ;
 
         qDebug()
-            << "distanceBase =" << distanceBase
+            << "distanceBase =" << environment.distanceBase
             << "rangeUAV =" << rangeUAV
-            << "vDrift =" << driftVelocity;
+            << "vDrift =" << environment.driftVelocity;
 
         qDebug()
             << "UAV CHECK основной расчет"
@@ -1375,14 +711,7 @@ void OilSpillWindow::calculateOperation()
         // ограничение по дальности
         //--------------------------------------------------
         qDebug() << "CHECK UAV";
-       /* if(rangeUAV < 240)
-        {
-            qDebug() << "UAV range fail:"
-                     << uavName
-                     << rangeUAV;
 
-            continue;
-        }*/
         if(searchLengthOneUAV <= 0.0)
         {
             continue;
@@ -1391,39 +720,34 @@ void OilSpillWindow::calculateOperation()
         // ВЕРТОЛЕТЫ
         //--------------------------------------------------
 
-        QSqlQuery helis(db);
-
-        helis.exec(
-                    "SELECT * FROM Helicopters");
-
-        while(helis.next())
+        for(const HelicopterData &heli : aircraftDatabase.helicopters)
         {
             int idHeli =
-                    helis.value(0).toInt();
+                    heli.id;
 
             QString heliName =
-                    helis.value(1).toString();
+                    heli.name;
 
             double vHeli =
-                    helis.value(2).toDouble();
+                    heli.speed;
 
             double rangeHeli =
-                    helis.value(3).toDouble();
+                    heli.range;
 
             double capacityHeli =
-                    helis.value(4).toDouble();
+                    heli.capacity;
 
             double fuelWeightHeli =
-                    helis.value(5).toDouble();
+                    heli.fuelWeight;
 
             double fuelConsumptionHeli =
-                    helis.value(6).toDouble();
+                    heli.fuelConsumption;
 
             double costHeli =
-                    helis.value(7).toDouble();
+                    heli.cost;
 
             double fuelPriceHeli =
-                    c.value(8).toDouble();
+                    operationConstants.fuelPriceHeli;
 
             //--------------------------------------------------
             // ограничение по дальности
@@ -1441,79 +765,77 @@ void OilSpillWindow::calculateOperation()
             // ВК
             //--------------------------------------------------
 
+            HelicopterCalculationResult heliResult =
+                    helicopterCalculator.calculate(
+                        operationResult.boomsMass,
+                        capacityHeli,
+                        oilSimulation.perimeter(),
+                        boomSpeed,
+                        loadingTime,
+                        environment.distanceBase,
+                        vHeli,
+                        beta,
+                        tLiquid,
+                        fuelConsumptionHeli,
+                        costHeli,
+                        fuelPriceHeli);
+
             double nFlightsHeli =
-                    ceil(
-                        boomsMass /
-                        capacityHeli);
+                    heliResult.flightsCount;
 
             double tBooms =
-                    (perimeter/1000.0) /
-                    boomSpeed;
+                    heliResult.boomTime;
 
             double tHeliFlight =
-                    2.0 * distanceBase  /
-                    vHeli;
+                    heliResult.flightTime;
 
             double tHeliMission =
-                    tHeliFlight
-                    +
-                    tBooms
-                    +
-                    loadingTime;
+                    heliResult.missionTime;
 
             double countHeli =
-                    ceil(
-                        nFlightsHeli *
-                        tHeliMission /
-                        (beta * tLiquid));
+                    heliResult.helicopterCount;
 
             double nFlightsPerHeli =
-            ceil(nFlightsHeli / countHeli);
+                    heliResult.flightsPerHelicopter;
 
             int tRealHeli =
-            nFlightsPerHeli *
-            tHeliMission;
+                    heliResult.realHelicopterTime;
 
             //--------------------------------------------------
             // САМОЛЕТЫ
             //--------------------------------------------------
 
-            QSqlQuery planes(db);
-
-            planes.exec(
-                        "SELECT * FROM Airplanes");
-
-            while(planes.next())
+            for(const AirplaneData &plane : aircraftDatabase.airplanes)
             {
                 int idPlane =
-                        planes.value(0).toInt();
+                        plane.id;
 
                 QString planeName =
-                        planes.value(1).toString();
+                        plane.name;
 
                 double vPlane =
-                        planes.value(2).toDouble();
+                        plane.speed;
 
                 double rangePlane =
-                        planes.value(3).toDouble();
+                        plane.range;
 
                 double capacityPlane =
-                        planes.value(4).toDouble();
+                        plane.capacity;
 
                 double sprayWidth =
-                        planes.value(5).toDouble();
+                        plane.sprayWidth;
 
                 double fuelWeightPlane =
-                        planes.value(6).toDouble();
+                        plane.fuelWeight;
 
                 double fuelConsumptionPlane =
-                        planes.value(7).toDouble();
+                        plane.fuelConsumption;
 
                 double costPlane =
-                        planes.value(8).toDouble();
+                        plane.cost;
 
                 double fuelPricePlane =
-                        c.value(8).toDouble();
+                        operationConstants.fuelPricePlane;
 
                 //------------------------------------------
                 // ограничение по дальности
@@ -1532,69 +854,59 @@ void OilSpillWindow::calculateOperation()
                 // АК
                 //------------------------------------------
 
+                AirplaneCalculationResult planeResult =
+                        airplaneCalculator.calculate(
+                            oilSimulation.currentArea(),
+                            kSpread,
+                            tDetect,
+                            beta,
+                            tLiquid,
+                            sprayRate,
+                            density,
+                            vPlane,
+                            sprayWidth,
+                            environment.distanceBase,
+                            loadingTime,
+                            capacityPlane,
+                            fuelConsumptionPlane,
+                            costPlane,
+                            fuelPricePlane);
 
                 double areaAtArrival =
-                        currentArea
-                        +
-                        M_PI *
-                        kSpread *
-                        1000000.0 *
-                        (
-                            tDetect
-                            +
-                            beta * tLiquid
-                        );
+                        planeResult.areaAtArrival;
+
                 double areaAtArrivalKm2 =
-                        areaAtArrival /
-                        1000000.0;
+                        planeResult.areaAtArrivalKm2;
 
                 double dispersantVolume =
-                        areaAtArrivalKm2 *
-                        sprayRate *
-                        100.0;
+                        planeResult.dispersantVolume;
+
                 double dispersantMassLocal =
-                        dispersantVolume *
-                        density /
-                        1000.0;
+                        planeResult.dispersantMass;
 
                 double qSpray =
-                        vPlane *
-                        sprayWidth *
-                        sprayRate *
-                        100.0;
+                        planeResult.sprayCapacity;
 
                 double tSpray =
-                        areaAtArrival /
-                        qSpray;
+                        planeResult.sprayTime;
 
                 double nFlightsPlane =
-                        ceil(
-                            dispersantMassLocal /
-                            capacityPlane);
+                        planeResult.flightsCount;
 
                 double tPlaneFlight =
-                        2.0 * distanceBase  /
-                        vPlane;
+                        planeResult.flightTime;
 
                 double tPlaneMission =
-                        tPlaneFlight
-                        +
-                        tSpray
-                        +
-                        loadingTime;
+                        planeResult.missionTime;
 
                 double countPlane =
-                        ceil(
-                            nFlightsPlane *
-                            tPlaneMission /
-                            tLiquid);
+                        planeResult.airplaneCount;
 
                 double nFlightsPerPlane =
-                ceil(nFlightsPlane / countPlane);
+                        planeResult.flightsPerAirplane;
 
                 int tRealPlane =
-                nFlightsPerPlane *
-                tPlaneMission;
+                        planeResult.realAirplaneTime;
 
                 qDebug()
                     << "PLANE CHECK"
@@ -1609,322 +921,97 @@ void OilSpillWindow::calculateOperation()
                 //--------------------------------------------------
                 // ЗАТРАТЫ ЭКСПЛУАТАЦИИ
                 //--------------------------------------------------
-/*
-                double CrUAV =
-                        countUAV *
-                        costUAV *
-                        tDetect;
-
-                double CrHeli =
-                        countHeli *
-                        costHeli *
-                        0.5 *
-                        tLiquid;
-
-                double CrPlane =
-                        countPlane *
-                        costPlane *
-                        tLiquid;
-
-
-                //риск скопирован в основной расчет
-                double CrUAV =
-                        costUAV *
-                        nFlightsUAV *
-                        tFlightMission;
-
-
-                double CrHeli =
-                        costHeli *
-                        nFlightsHeli *
-                        tHeliMission;
-
-
-                double CrPlane =
-                    costPlane *
-                    nFlightsPlane *
-                    tPlaneMission;
-              */
-
-
-//было 26 июня:
-/*
-                double CrUAV =
-                    costUAV *
-                    countUAV ;
-
-
-
-                double CrHeli =
-                    costHeli *
-                    countHeli ;
-
-                double CrPlane =
-                    costPlane *
-                    countPlane ;
 
                 double CrUAV =
-                    costUAV *
-                    nFlightsUAV *
-                    tFlightMission;
+                        uavResult.operationCost;
                 double CrHeli =
-                    costHeli *
-                    nFlightsHeli *
-                    tHeliMission;
+                        heliResult.operationCost;
                 double CrPlane =
-                    costPlane *
-                    nFlightsPlane *
-                    tPlaneMission;*/
-
-                double CrUAV =
-                    countUAV * tRealUAV * costUAV;
-                double CrHeli =
-                    countHeli * tRealHeli * costHeli;
-                double CrPlane =
-                    countPlane * tRealPlane * costPlane;
-
-                double Cr =
-                        CrUAV +
-                        CrHeli +
-                        CrPlane;
+                        planeResult.operationCost;
 
                 //--------------------------------------------------
                 // ЗАТРАТЫ НА ТОПЛИВО
                 //--------------------------------------------------
-/*
-                double CfUAV =
-                        countUAV *
-                        fuelConsumptionUAV *
-                        tDetect *
-                        fuelPrice;
-
-                double CfHeli =
-                        countHeli *
-                        fuelConsumptionHeli *
-                        0.5 *
-                        tLiquid *
-                        fuelPrice;
-
-                double CfPlane =
-                        countPlane *
-                        fuelConsumptionPlane *
-                        tLiquid *
-                        fuelPrice;
-
-
-                //риск скопирован в основной расчет
 
                 double CfUAV =
-                            fuelConsumptionUAV *
-                            nFlightsUAV * tFlightMission *
-                            fuelPrice;
-
+                        uavResult.fuelCost;
                 double CfHeli =
-                        fuelConsumptionHeli *
-                        nFlightsHeli * tHeliMission *
-                        fuelPrice;
-
+                        heliResult.fuelCost;
                 double CfPlane =
-                        fuelConsumptionPlane *
-                        nFlightsPlane *
-                        tPlaneMission *
-                        fuelPrice;
-*/
-
-
-
-//было 26 июня топливо
-/*
-                double CfUAV =
-                        fuelConsumptionUAV *
-                        countUAV *
-
-                        fuelPrice;
-
-                double CfHeli =
-                        fuelConsumptionHeli *
-                        countHeli *
-
-                        fuelPrice;
-
-                double CfPlane =
-                        fuelConsumptionPlane *
-                        countPlane *
-
-                        fuelPrice;
-
-                double CfUAV =
-                    nFlightsUAV *
-                    tFlightMission *
-                    fuelConsumptionUAV *
-                    fuelPrice;
-                double CfHeli =
-                    nFlightsHeli *
-                    tHeliMission *
-                    fuelConsumptionHeli *
-                    fuelPrice;
-                double CfPlane =
-                    nFlightsPlane *
-                    tPlaneMission *
-                    fuelConsumptionPlane *
-                    fuelPrice;*/
-
-                double CfUAV =
-                    countUAV *
-                    tRealUAV *
-                    fuelConsumptionUAV *
-                    fuelPriceUAV;
-                double CfHeli =
-                        countHeli *
-                        tRealHeli *
-                    fuelConsumptionHeli *
-                    fuelPriceHeli;
-                double CfPlane =
-                        countPlane *
-                        tRealPlane *
-                    fuelConsumptionPlane *
-                    fuelPricePlane;
-
-
-                double Cf =
-                        CfUAV +
-                        CfHeli +
-                        CfPlane;
+                        planeResult.fuelCost;
 
                 double totalUAVCost =
-                        CrUAV +
-                        CfUAV;
-/*
-                if(!uavNames.contains(uavName))
+                        uavResult.totalCost;
+
+                if(totalUAVCost < operationResult.bestUAVCost)
                 {
-                    uavNames.push_back(uavName);
-                    uavCosts.push_back(totalUAVCost);
-                    uavCounts.push_back(countUAV);
-                }
-                */
-
-/*
-                uavNames.push_back(
-                            uavName);
-
-                uavCosts.push_back(
-                            totalUAVCost);
-
-                uavCounts.push_back(
-                            countUAV);
-*/
-
-
-
-                if(totalUAVCost < bestUAVCost)
-                {
-                    bestUAVCost =
+                    operationResult.bestUAVCost =
                             totalUAVCost;
 
-                    bestUAV =
+                    operationResult.bestUAV =
                             uavName;
 
-                    bestUAVCount =
+                    operationResult.bestUAVCount =
                             countUAV;
 
-                    bestUAVId =
+                    operationResult.bestUAVId =
                             idUAV;
 
-                    bestUAVOperationCost =
+                    operationResult.bestUAVOperationCost =
                             CrUAV;
 
-                    bestUAVFuelCost =
+                    operationResult.bestUAVFuelCost =
                             CfUAV;
                 }
 
                 double totalHeliCost =
-                        CrHeli +
-                        CfHeli;
+                        heliResult.totalCost;
 
-                /*
-                if(!heliNames.contains(heliName))
+                if(totalHeliCost < operationResult.bestHeliCost)
                 {
-                    heliNames.push_back(heliName);
-                    heliCosts.push_back(totalHeliCost);
-                    heliCounts.push_back(countHeli);
-                }
-                */
-
-/*
-                heliNames.push_back(
-                            heliName);
-
-                heliCosts.push_back(
-                            totalHeliCost);
-
-                heliCounts.push_back(
-                            countHeli);
-*/
-                if(totalHeliCost < bestHeliCost)
-                {
-                    bestHeliCost =
+                    operationResult.bestHeliCost =
                             totalHeliCost;
 
-                    bestHeli =
+                    operationResult.bestHeli =
                             heliName;
 
-                    bestHeliCount =
+                    operationResult.bestHeliCount =
                             countHeli;
 
-                    bestHeliId =
+                    operationResult.bestHeliId =
                             idHeli;
 
-                    bestHeliOperationCost =
+                    operationResult.bestHeliOperationCost =
                             CrHeli;
 
-                    bestHeliFuelCost =
+                    operationResult.bestHeliFuelCost =
                             CfHeli;
                 }
 
                 double totalPlaneCost =
-                        CrPlane +
-                        CfPlane;
+                        planeResult.totalCost;
 
-                /*
-                if(!planeNames.contains(planeName))
+                if(totalPlaneCost < operationResult.bestPlaneCost)
                 {
-                    planeNames.push_back(planeName);
-                    planeCosts.push_back(totalPlaneCost);
-                    planeCounts.push_back(countPlane);
-                }
-                */
-
-/*
-                planeNames.push_back(
-                            planeName);
-
-                planeCosts.push_back(
-                            totalPlaneCost);
-
-                planeCounts.push_back(
-                            countPlane);
-*/
-                if(totalPlaneCost < bestPlaneCost)
-                {
-                    bestPlaneCost =
+                    operationResult.bestPlaneCost =
                             totalPlaneCost;
 
-                    bestPlane =
+                    operationResult.bestPlane =
                             planeName;
 
-                    bestPlaneCount =
+                    operationResult.bestPlaneCount =
                             countPlane;
 
-                    bestPlaneId =
+                    operationResult.bestPlaneId =
                             idPlane;
 
-                    dispersantMass =
+                    operationResult.dispersantMass =
                             dispersantMassLocal;
 
-                    bestPlaneOperationCost =
+                    operationResult.bestPlaneOperationCost =
                             CrPlane;
 
-                    bestPlaneFuelCost =
+                    operationResult.bestPlaneFuelCost =
                             CfPlane;
                 }
 
@@ -1932,17 +1019,35 @@ void OilSpillWindow::calculateOperation()
                 // ЗАТРАТЫ НА МАТЕРИАЛЫ
                 //--------------------------------------------------
 
-                double CmDisp =
-                        dispersantMassLocal *
-                        dispersantPrice;
+                OperationCalculationResult operationCalcResult =
+                        operationCalculator.calculate(
+                            CrUAV,
+                            CrHeli,
+                            CrPlane,
+                            CfUAV,
+                            CfHeli,
+                            CfPlane,
+                            dispersantMassLocal,
+                            dispersantPrice,
+                            operationResult.boomsMass,
+                            boomPrice,
+                            tDetect,
+                            tLiquid);
 
-                double CmBooms =
-                        boomsMass *
-                        boomPrice;
+                double Cr =
+                        operationCalcResult.operationCost;
+
+                double Cf =
+                        operationCalcResult.fuelCost;
 
                 double Cm =
-                        CmDisp +
-                        CmBooms;
+                        operationCalcResult.materialCost;
+
+                double totalCost =
+                        operationCalcResult.totalCost;
+
+                double operationTime =
+                        operationCalcResult.operationTime;
 
                 //--------------------------------------------------
                 // ОБЩИЕ ЗАТРАТЫ
@@ -1961,10 +1066,7 @@ void OilSpillWindow::calculateOperation()
                     << "CfPlane=" << CfPlane
                     << "Cm=" << Cm;
 
-                double totalCost =
-                        Cr +
-                        Cf +
-                        Cm;
+
 
                 qDebug()
                         << "EPSILON"
@@ -1996,49 +1098,6 @@ void OilSpillWindow::calculateOperation()
                         << planeName
                         << totalCost;
 
-                /*
-                 * if(bestOperationTime  <= t)
-                {
-                if(totalCost < bestCost)
-                {
-                    bestCost = totalCost;
-
-                    bestUAV = uavName;
-                    bestHeli = heliName;
-                    bestPlane = planeName;
-
-                    bestUAVCount = countUAV;
-                    bestHeliCount = countHeli;
-                    bestPlaneCount = countPlane;
-                }
-                }
-                */
-                /*
-                double operationTime = t;
-
-                if(operationTime <= timeLimit)
-                {
-                    if(totalCost < localBestCost)
-                    {
-                        localBestCost = totalCost;
-                        localBestTime = bestOperationTime;
-
-                        localBestUav = u;
-                        localBestHeli = h;
-                        localBestPlane = p;
-                    }
-                }*/
-
-                /*
-                if(totalCost < localBestCost)
-                {
-                    localBestCost = totalCost;
-                }
-                */
-
-                double operationTime = tDetect + tLiquid;
-
-
                 qDebug()
                     << "СЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАССЕЙЧАС"
                     << "t =" << t
@@ -2050,6 +1109,7 @@ void OilSpillWindow::calculateOperation()
                     << "Cf =" << Cf
                     << "Cm =" << Cm
                     << "total =" << totalCost;
+
                 if(operationTime <= t)
                 {
                     if(totalCost < localBestCost)
@@ -2077,7 +1137,7 @@ void OilSpillWindow::calculateOperation()
                         fuelConsumptionUAV;
 
                 double tOneUAVFlight =
-                        2.0 * distanceBase  / vUAV +
+                        2.0 * environment.distanceBase  / vUAV +
                         tFlightUAV;
 
                 double enduranceHeli =
@@ -2087,66 +1147,13 @@ void OilSpillWindow::calculateOperation()
                 double endurancePlane =
                         fuelWeightPlane /
                         fuelConsumptionPlane;
-/*
-                if(tOneUAVFlight > enduranceUAV)
-                {
-                    qDebug()
-                            << "UAV endurance fail"
-                            << uavName
-                            << "mission="
-                            << tOneUAVFlight
-                            << "endurance="
-                            << enduranceUAV;
-
-                    continue;
-                }
-
-                if(tHeliMission > enduranceHeli)
-                {
-                    qDebug()
-                            << "HELI endurance fail"
-                            << heliName
-                            << "mission="
-                            << tHeliMission
-                            << "endurance="
-                            << enduranceHeli;
-
-                    continue;
-                }
-
-                if(tPlaneMission > endurancePlane)
-                {
-                    qDebug()
-                            << "PLANE endurance fail"
-                            << planeName
-                            << "mission="
-                            << tPlaneMission
-                            << "endurance="
-                            << endurancePlane;
-
-                    continue;
-                }
-*/
-
 
             }
         }
     }
-}//для beta
+} //для beta
 } //для epsilon
-/*
-    if(localBestCost < 1e100)
-    {
-        graphTimes.append(t);
 
-        graphCosts.append(
-            localBestCost / 1000000.0);
-    }
-    qDebug()
-        << "GRAPH:"
-        << t
-        << localBestCost;
-        */
     if(localBestCost < 1e100)
     {
         graphTimes.append(
@@ -2200,100 +1207,83 @@ void OilSpillWindow::calculateOperation()
 
     if(bestIndex >= 0)
     {
-        bestCost =
+        operationResult.bestCost =
                 graphCosts[bestIndex] * 1000000.0;
 
-        bestOperationTime =
+        operationResult.bestOperationTime =
                 graphOperationTimes[bestIndex];
 
-        bestUAVCount =
+        operationResult.bestUAVCount =
                 graphUAVCounts[bestIndex];
 
-        bestHeliCount =
+        operationResult.bestHeliCount =
                 graphHeliCounts[bestIndex];
 
-        bestPlaneCount =
+        operationResult.bestPlaneCount =
                 graphPlaneCounts[bestIndex];
 
-        bestUAV =
+        operationResult.bestUAV =
                 graphUAVNames[bestIndex];
 
-        bestHeli =
+        operationResult.bestHeli =
                 graphHeliNames[bestIndex];
 
-        bestPlane =
+        operationResult.bestPlane =
                 graphPlaneNames[bestIndex];
 
-        bestEpsilon =
+        operationResult.bestEpsilon =
                 graphEpsilons[bestIndex];
 
-        bestBeta =
+        operationResult.bestBeta =
                 graphBetas[bestIndex];
     }
 
+    aircraft.uavNames.clear();
+    aircraft.uavCosts.clear();
+    aircraft.uavCounts.clear();
 
+    aircraft.heliNames.clear();
+    aircraft.heliCosts.clear();
+    aircraft.heliCounts.clear();
 
-    uavNames.clear();
-    uavCosts.clear();
-    uavCounts.clear();
-
-    heliNames.clear();
-    heliCosts.clear();
-    heliCounts.clear();
-
-    planeNames.clear();
-    planeCosts.clear();
-    planeCounts.clear();
-/*
-    uavNames.push_back(bestUAV);
-    uavCosts.push_back(bestUAVCost);
-    uavCounts.push_back(bestUAVCount);
-
-    heliNames.push_back(bestHeli);
-    heliCosts.push_back(bestHeliCost);
-    heliCounts.push_back(bestHeliCount);
-
-    planeNames.push_back(bestPlane);
-    planeCosts.push_back(bestPlaneCost);
-    planeCounts.push_back(bestPlaneCount);
-*/
+    aircraft.planeNames.clear();
+    aircraft.planeCosts.clear();
+    aircraft.planeCounts.clear();
 
     double tDetectBest =
-            bestEpsilon * bestOperationTime;
+            operationResult.bestEpsilon * operationResult.bestOperationTime;
 
     double tLiquidBest =
-            (1-bestEpsilon) * bestOperationTime;
+            (1-operationResult.bestEpsilon) * operationResult.bestOperationTime;
 
     for(int i = 0; i < graphOperationTimes.size(); i++)
     {
         if(qFuzzyCompare(
                 graphOperationTimes[i] + 1.0,
-                bestOperationTime + 1.0))
+                operationResult.bestOperationTime + 1.0))
         {
             continue;
         }
     }
 
-    QSqlQuery uavsChart(db);
+    //второй расччет
+    for(const UAVData &uav : aircraftDatabase.uavs)
+    {    
 
-    uavsChart.exec("SELECT * FROM UAVs");
-
-    while(uavsChart.next())
-    {
         QString uavName =
-                uavsChart.value(1).toString();
+                uav.name;
 
         double vUAV =
-                uavsChart.value(2).toDouble();
+                uav.speed;
 
         double fuelConsumptionUAV =
-                uavsChart.value(5).toDouble();
+                uav.fuelConsumption;
 
         double costUAV =
-                uavsChart.value(6).toDouble();
+                uav.cost;
 
         double fuelPriceUAV =
-                c.value(7).toDouble();
+                operationConstants.fuelPriceUAV;
 
         double stripWidth =
                 2.0 *
@@ -2301,42 +1291,11 @@ void OilSpillWindow::calculateOperation()
                 tan(
                     degToRad(
                         viewingAngle / 2.0));
-        /*
-
-        double qUAV =
-                vUAV *
-                stripWidth;
-
-        double tFlightUAV =
-                uavsChart.value(4).toDouble() /
-                fuelConsumptionUAV;
-
-        double nFlightsUAV =
-                searchArea /
-                (qUAV * tFlightUAV);
-
-        double tFlightMission =
-                2.0 * distanceBase / vUAV +
-                searchArea / qUAV;
-
-        double countUAV =
-                ceil(
-                    nFlightsUAV *
-                    tFlightMission /
-                    tDetectBest);
-                    */
 
         double searchRadius =
-                driftVelocity *
+                environment.driftVelocity *
                 tDetectBest;
-        /*
-        double stripWidth =
-                2.0 *
-                flightHeight *
-                tan(
-                    degToRad(
-                        viewingAngle / 2.0));
-        */
+
         double thetaSpiral =
                 (2.0 * M_PI * searchRadius)
                 /
@@ -2362,10 +1321,10 @@ void OilSpillWindow::calculateOperation()
                 );
 
         double searchLengthOneUAV =
-                uavsChart.value(3).toDouble()
+                uav.range
                 -
                 2.0 *
-                distanceBase;
+                environment.distanceBase;
 
         if(searchLengthOneUAV <= 0.0)
         {
@@ -2383,7 +1342,7 @@ void OilSpillWindow::calculateOperation()
                     searchLengthOneUAV
                     +
                     2.0 *
-                    distanceBase
+                    environment.distanceBase
                 )
                 /
                 vUAV;
@@ -2401,30 +1360,8 @@ void OilSpillWindow::calculateOperation()
         nFlightsPerUAV *
         tFlightMission;
 
-        /*
-        double CrUAV =
-                costUAV *
-                countUAV;
-
-        double CrUAV =
-            costUAV *
-            nFlightsUAV *
-            tFlightMission;*/
         double CrUAV =
             countUAV * tRealUAV * costUAV;
-
-
-/*
-        double CfUAV =
-                fuelConsumptionUAV *
-                countUAV *
-                fuelPrice;
-
-        double CfUAV =
-            nFlightsUAV *
-            tFlightMission *
-            fuelConsumptionUAV *
-            fuelPrice;*/
 
         double CfUAV =
             countUAV *
@@ -2436,46 +1373,43 @@ void OilSpillWindow::calculateOperation()
                 CrUAV +
                 CfUAV;
 
-        uavNames.push_back(uavName);
-        uavCosts.push_back(totalUAVCost);
-        uavCounts.push_back(countUAV);
+        aircraft.uavNames.push_back(uavName);
+        aircraft.uavCosts.push_back(totalUAVCost);
+        aircraft.uavCounts.push_back(countUAV);
     }
 
-    QSqlQuery helisChart(db);
-
-    helisChart.exec("SELECT * FROM Helicopters");
-
-    while(helisChart.next())
+    for(const HelicopterData &heli : aircraftDatabase.helicopters)
     {
+
         QString heliName =
-                helisChart.value(1).toString();
+                heli.name;
 
         double vHeli =
-                helisChart.value(2).toDouble();
+                heli.speed;
 
         double capacityHeli =
-                helisChart.value(4).toDouble();
+                heli.capacity;
 
         double fuelConsumptionHeli =
-                helisChart.value(6).toDouble();
+                heli.fuelConsumption;
 
         double costHeli =
-                helisChart.value(7).toDouble();
+                heli.cost;
 
-        double fuelPriceHeli =
-                c.value(8).toDouble();
+        double  fuelPriceHeli=
+                operationConstants.fuelPriceHeli;
 
         double nFlightsHeli =
                 ceil(
-                    boomsMass /
+                    operationResult.boomsMass /
                     capacityHeli);
 
         double tBooms =
-                (perimeter / 1000.0) /
+                (oilSimulation.perimeter() / 1000.0) /
                 boomSpeed;
 
         double tHeliFlight =
-                2.0 * distanceBase /
+                2.0 * environment.distanceBase /
                 vHeli;
 
         double tHeliMission =
@@ -2487,7 +1421,7 @@ void OilSpillWindow::calculateOperation()
                 ceil(
                     nFlightsHeli *
                     tHeliMission /
-                    (bestBeta * tLiquidBest));
+                    (operationResult.bestBeta * tLiquidBest));
 
         double nFlightsPerHeli =
         ceil(nFlightsHeli / countHeli);
@@ -2496,31 +1430,8 @@ void OilSpillWindow::calculateOperation()
         nFlightsPerHeli *
         tHeliMission;
 
-        /*
-        double CrHeli =
-                costHeli *
-                countHeli;
-
-        double CrHeli =
-            costHeli *
-            nFlightsHeli *
-            tHeliMission; */
-
         double CrHeli =
             countHeli * tRealHeli * costHeli;
-
-
-/*
-        double CfHeli =
-                fuelConsumptionHeli *
-                countHeli *
-                fuelPrice;
-
-        double CfHeli =
-            nFlightsHeli *
-            tHeliMission *
-            fuelConsumptionHeli *
-            fuelPrice;*/
 
         double CfHeli =
                 countHeli *
@@ -2532,46 +1443,43 @@ void OilSpillWindow::calculateOperation()
                 CrHeli +
                 CfHeli;
 
-        heliNames.push_back(heliName);
-        heliCosts.push_back(totalHeliCost);
-        heliCounts.push_back(countHeli);
+        aircraft.heliNames.push_back(heliName);
+        aircraft.heliCosts.push_back(totalHeliCost);
+        aircraft.heliCounts.push_back(countHeli);
     }
 
-    QSqlQuery planesChart(db);
-
-    planesChart.exec("SELECT * FROM Airplanes");
-
-    while(planesChart.next())
+    for(const AirplaneData &plane : aircraftDatabase.airplanes)
     {
+
         QString planeName =
-                planesChart.value(1).toString();
+                plane.name;
 
         double vPlane =
-                planesChart.value(2).toDouble();
+                plane.speed;
 
         double capacityPlane =
-                planesChart.value(4).toDouble();
+                plane.capacity;
 
         double sprayWidth =
-                planesChart.value(5).toDouble();
+                plane.sprayWidth;
 
         double fuelConsumptionPlane =
-                planesChart.value(7).toDouble();
+                plane.fuelConsumption;
 
         double costPlane =
-                planesChart.value(8).toDouble();
+                plane.cost;
 
-        double fuelPricePlane =
-                c.value(8).toDouble();
+        double  fuelPricePlane=
+                operationConstants.fuelPricePlane;
 
         double areaAtArrival =
-                currentArea +
+                oilSimulation.currentArea() +
                 M_PI *
                 kSpread *
                 1000000.0 *
                 (
                     tDetectBest +
-                    bestBeta * tLiquidBest
+                    operationResult.bestBeta * tLiquidBest
                 );
 
         double dispersantVolume =
@@ -2601,7 +1509,7 @@ void OilSpillWindow::calculateOperation()
                     capacityPlane);
 
         double tPlaneFlight =
-                2.0 * distanceBase /
+                2.0 * environment.distanceBase /
                 vPlane;
 
         double tPlaneMission =
@@ -2621,30 +1529,9 @@ void OilSpillWindow::calculateOperation()
         int tRealPlane =
         nFlightsPerPlane *
         tPlaneMission;
-/*
-        double CrPlane =
-                costPlane *
-                countPlane;
-
-        double CrPlane =
-            costPlane *
-            nFlightsPlane *
-            tPlaneMission;*/
 
         double CrPlane =
             countPlane * tRealPlane * costPlane;
-
-        /*
-        double CfPlane =
-                fuelConsumptionPlane *
-                countPlane *
-                fuelPrice;
-
-        double CfPlane =
-            nFlightsPlane *
-            tPlaneMission *
-            fuelConsumptionPlane *
-            fuelPrice;*/
 
         double CfPlane =
                 countPlane *
@@ -2656,265 +1543,80 @@ void OilSpillWindow::calculateOperation()
                 CrPlane +
                 CfPlane;
 
-        planeNames.push_back(planeName);
-        planeCosts.push_back(totalPlaneCost);
-        planeCounts.push_back(countPlane);
+        aircraft.planeNames.push_back(planeName);
+        aircraft.planeCosts.push_back(totalPlaneCost);
+        aircraft.planeCounts.push_back(countPlane);
     }
 
+    RiskCalculationResult riskResult =
+            riskCalculator.calculate(
+                oilVolume,
+                environment.distanceShore,
+                environment.driftVelocity,
+                environment.vulnerabilityCoefficient,
+                timeLimit,
+                operationResult.bestOperationTime,
+                graphOperationTimes,
+                graphCosts,
+                graphUAVNames,
+                graphHeliNames,
+                graphPlaneNames,
+                graphUAVCounts,
+                graphHeliCounts,
+                graphPlaneCounts);
 
+    operationResult.riskValue =
+            riskResult.riskValue;
 
+    operationResult.riskLevel =
+            riskResult.riskLevel;
 
-    riskTimes.clear();
-    riskValues.clear();
+    operationResult.riskColor =
+            riskResult.riskColor;
 
-    for(int i = 0; i < graphOperationTimes.size(); i++)
-    {
-        double t = graphOperationTimes[i];
+    riskTimes =
+            riskResult.riskTimes;
 
-        double shoreDistance =
-                qMax(
-                    0.0,
-                    distanceShore -
-                    driftVelocity * t);
+    riskValues =
+            riskResult.riskValues;
 
-        double shoreFactor =
-                1.0 -
-                shoreDistance /
-                distanceShore;
-
-        shoreFactor =
-                qBound(0.0, shoreFactor, 1.0);
-
-        double risk =
-                (oilVolume / 1000.0)
-                *
-                shoreFactor
-                *
-                (driftVelocity / 10.0)
-                *
-                vulnerabilityCoefficient
-                ;
-
-        risk =
-                qBound(0.0, risk, 1.0);
-
-        riskTimes.push_back(t);
-        riskValues.push_back(risk);
-    }
-
-    scenarios.clear();
-
-    QVector<double> scenarioFractions;
-
-    scenarioFractions
-            << 0.25
-            << 0.50
-            << 0.75
-            << 1.00;
+    scenarios =
+            riskResult.scenarios;
 
     qDebug()
             << "MAIN COST"
-            << bestCost;
+            << operationResult.bestCost;
 
 
-    operationCost =
-            bestUAVOperationCost
+    operationResult.operationCost =
+            operationResult.bestUAVOperationCost
             +
-            bestHeliOperationCost
+            operationResult.bestHeliOperationCost
             +
-            bestPlaneOperationCost;
+            operationResult.bestPlaneOperationCost;
 
-    fuelCost =
-            bestUAVFuelCost
+    operationResult.fuelCost =
+            operationResult.bestUAVFuelCost
             +
-            bestHeliFuelCost
+            operationResult.bestHeliFuelCost
             +
-            bestPlaneFuelCost;
+            operationResult.bestPlaneFuelCost;
 
-    materialCost =
-            dispersantMass *
+    operationResult.materialCost =
+            operationResult.dispersantMass *
             dispersantPrice
             +
-            boomsMass *
+            operationResult.boomsMass *
             boomPrice;
 
-    bestCost =
-            operationCost
+    operationResult.bestCost =
+            operationResult.operationCost
             +
-            fuelCost
+            operationResult.fuelCost
             +
-            materialCost;
-
-/*
-   bestOperationTime =
-           timeLimit;
-
-*/
-
-
-    double shoreDistanceNow =
-            qMax(
-                0.0,
-                distanceShore
-                -
-                driftVelocity
-                *
-                timeLimit);
-
-    double shoreFactor =
-            1.0 -
-            shoreDistanceNow /
-            distanceShore;
-
-
-
-    if(shoreFactor < 0.0)
-        shoreFactor = 0.0;
-
-    if(shoreFactor > 1.0)
-        shoreFactor = 1.0;
-
-    riskValue =
-            (oilVolume / 1000.0)
-            *
-            shoreFactor
-            *
-            (driftVelocity / 10.0)
-            *
-            vulnerabilityCoefficient
-           ;
-
-    if(riskValue > 1)
-        riskValue = 1;
-
-    if(riskValue < 0)
-        riskValue = 0;
-
-    if(riskValue <= 0.25)
-    {
-        riskLevel = "Низкий";
-        riskColor = "#00ff55";
-    }
-    else if(riskValue <= 0.35)
-    {
-        riskLevel = "Средний";
-        riskColor = "#ffff00";
-    }
-    else if(riskValue <= 0.6)
-    {
-        riskLevel = "Высокий";
-        riskColor = "#ff8800";
-    }
-    else
-    {
-        riskLevel = "Критический";
-        riskColor = "#ff0000";
-    }
-
-    //Risk for all scenarios
-  /*
-    struct RiskScenario
-    {
-        QString level;
-        QString color;
-
-        double risk;
-        double time;
-        double cost;
-
-        QString uav;
-        QString heli;
-        QString plane;
-
-        int uavCount;
-        int heliCount;
-        int planeCount;
-    };
-
-    QVector<RiskScenario> scenarios;
-*/
-    scenarios.clear();
-
+            operationResult.materialCost;
 
     QVector<double> scenarioTimes;
-
-
-
-    for(double fraction : scenarioFractions)
-    {
-        double targetTime =
-                bestOperationTime * fraction;
-
-        int bestScenarioIndex = 0;
-
-        double minDelta = 1e100;
-
-        for(int i = 0; i < graphOperationTimes.size(); i++)
-        {
-            double delta =
-                    qAbs(
-                        graphOperationTimes[i]
-                        -
-                        targetTime);
-
-            if(delta < minDelta)
-            {
-                minDelta = delta;
-                bestScenarioIndex = i;
-            }
-        }
-
-        RiskScenario s;
-
-        s.time =
-                graphOperationTimes[bestScenarioIndex];
-
-        s.cost =
-                graphCosts[bestScenarioIndex] * 1000000.0;
-
-        s.uav =
-                graphUAVNames[bestScenarioIndex];
-
-        s.heli =
-                graphHeliNames[bestScenarioIndex];
-
-        s.plane =
-                graphPlaneNames[bestScenarioIndex];
-
-        s.uavCount =
-                graphUAVCounts[bestScenarioIndex];
-
-        s.heliCount =
-                graphHeliCounts[bestScenarioIndex];
-
-        s.planeCount =
-                graphPlaneCounts[bestScenarioIndex];
-
-        s.risk =
-                riskValues[bestScenarioIndex];
-        if(s.risk <= 0.25)
-        {
-            s.level = "Низкий";
-            s.color = "#00ff00";
-        }
-        else if(s.risk <= 0.35)
-        {
-            s.level = "Средний";
-            s.color = "#ffff00";
-        }
-        else if(s.risk <= 0.6)
-        {
-            s.level = "Высокий";
-            s.color = "#ff8800";
-        }
-        else
-        {
-            s.level = "Критический";
-            s.color = "#ff0000";
-        }
-
-        scenarios.push_back(s);
-    }
 
     for(int i = 0; i < scenarioTimes.size(); i++)
     {
@@ -2922,10 +1624,10 @@ void OilSpillWindow::calculateOperation()
                 scenarioTimes[i];
 
         double scenarioDetect =
-                bestEpsilon * scenarioTime;
+                operationResult.bestEpsilon * scenarioTime;
 
         double scenarioLiquid =
-                (1-bestEpsilon) * scenarioTime;
+                (1-operationResult.bestEpsilon) * scenarioTime;
 
         double scenarioBestCost =
                 1e100;
@@ -2942,19 +1644,17 @@ void OilSpillWindow::calculateOperation()
         int scenarioBestHeliCount = 0;
         int scenarioBestPlaneCount = 0;
 
-
-
         double shoreDistance =
                 qMax(
                     0.0,
-                    distanceShore -
-                    driftVelocity *
+                    environment.distanceShore -
+                    environment.driftVelocity *
                     scenarioTime);
 
         double shoreFactor =
                 1.0 -
                 shoreDistance /
-                distanceShore;
+                environment.distanceShore;
 
         if(shoreFactor < 0.0)
             shoreFactor = 0.0;
@@ -2967,12 +1667,11 @@ void OilSpillWindow::calculateOperation()
                 *
                 shoreFactor
                 *
-                (driftVelocity / 10.0)
+                (environment.driftVelocity / 10.0)
                 *
-                vulnerabilityCoefficient
+                environment.vulnerabilityCoefficient
                 ;
     };
-
 
     QString riskHtml;
 
@@ -3095,14 +1794,12 @@ void OilSpillWindow::calculateOperation()
                     "}"
                     );
 
-
-
     //--------------------------------------------------
-    // СОХРАНЕНИЕ В RESULT
+    // СОХРАНЕНИЕ В RESULT PANEL
     //--------------------------------------------------
 
-    QSqlQuery save(db);
-    QSqlQuery clear(db);
+    QSqlQuery save(databaseManager.database());
+    QSqlQuery clear(databaseManager.database());
     clear.exec("DELETE FROM Result");
     save.prepare(
 
@@ -3138,21 +1835,21 @@ void OilSpillWindow::calculateOperation()
     save.addBindValue(oilVolume);
     save.addBindValue(timeLimit);
 
-    save.addBindValue(bestUAVId);
-    save.addBindValue(bestHeliId);
-    save.addBindValue(bestPlaneId);
+    save.addBindValue(operationResult.bestUAVId);
+    save.addBindValue(operationResult.bestHeliId);
+    save.addBindValue(operationResult.bestPlaneId);
 
-    save.addBindValue(bestUAVCount);
-    save.addBindValue(bestHeliCount);
-    save.addBindValue(bestPlaneCount);
+    save.addBindValue(operationResult.bestUAVCount);
+    save.addBindValue(operationResult.bestHeliCount);
+    save.addBindValue(operationResult.bestPlaneCount);
 
-    save.addBindValue(bestCost);
+    save.addBindValue(operationResult.bestCost);
 
-    save.addBindValue(riskValue);
+    save.addBindValue(operationResult.riskValue);
 
     save.exec();
 
-    QSqlQuery q(db);
+    QSqlQuery q(databaseManager.database());
 
     q.exec("SELECT * FROM Result LIMIT 1");
 
@@ -3186,516 +1883,16 @@ void OilSpillWindow::calculateOperation()
     }
 }
 
-QWidget* OilSpillWindow::createLegendItem(
-        const QColor &color,
-        const QString &text)
-{
-    QWidget *item = new QWidget;
-
-    QHBoxLayout *layout = new QHBoxLayout(item);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(8);
-
-    QLabel *marker = new QLabel;
-    marker->setFixedSize(14, 14);
-
-    marker->setStyleSheet(QString(
-        "background-color: %1;"
-        "border-radius: 7px;"
-        "border: 1px solid white;")
-        .arg(color.name()));
-
-    QLabel *label = new QLabel(text);
-
-    label->setStyleSheet(
-        "color: white;"
-        "font-size: 12px;"
-        "font-family: Bahnschrift;"
-    );
-
-    layout->addWidget(marker);
-    layout->addWidget(label);
-
-    return item;
-}
-
 void OilSpillWindow::createCharts()
 {
-    //--------------------------------------------------
-    // БПЛА
-    //--------------------------------------------------
 
-    QBarSet *uavSet =
-            new QBarSet("БПЛА");
-
-    for(int i=0; i<uavCosts.size(); i++)
-    {
-        *uavSet << uavCosts[i] / 1000000.0;
-    }
-
-
-    uavSet->setColor(
-                QColor(35, 182, 175));
-
-    QBarSeries *uavSeries =
-            new QBarSeries();
-
-    uavSeries->append(uavSet);
-
-    QChart *uav =
-            new QChart();
-
-    uav->addSeries(uavSeries);
-
-    uav->setTitle("<b>БПЛА</b>");
-
-    // Настройка фона и рамки в стиле HUD
-    uav->setBackgroundPen(QPen(Qt::NoPen));  // Убираем собственную рамку
-    uav->setBackgroundBrush(QBrush(QColor(255, 255, 255)));  // Белый фон
-    uav->setPlotAreaBackgroundVisible(true);
-    uav->setPlotAreaBackgroundBrush(QBrush(QColor(255, 255, 255)));
-
-    QStringList cats1;
-
-    for(int i=0; i<uavNames.size(); i++)
-    {
-        cats1 <<
-            uavNames[i]
-            + "\n("
-            + QString::number(uavCounts[i])
-            + ")";
-    }
-
-    QBarCategoryAxis *axis1 =
-            new QBarCategoryAxis();
-
-    axis1->append(cats1);
-    uav->layout()->setContentsMargins(0, 0, 0, 0);
-    uav->createDefaultAxes();
-
-    uav->setAxisX(
-                axis1,
-                uavSeries);
-    QFont axisFont;
-    axisFont.setPointSize(5);
-
-    axis1->setLabelsFont(axisFont);
-
-    uav->legend()->hide();
-
-    // Создаём QChartView без рамки
-    uavChart = new QChartView(uav);
-    uavChart->setStyleSheet("QChartView { border: none; background: transparent; }");
-
-    // Создаём фрейм-контейнер с голубой рамкой
-    QFrame *uavFrame = new QFrame(this);
-    uavFrame->setGeometry(0, 750, 660, 250);
-    uavFrame->setStyleSheet(
-        "QFrame{"
-        "    background-color: rgba(4,14,28,120);"
-        "    border: 1px solid rgba(0,255,255,120);"
-        "    border-radius: 15px;"
-        "}"
-    );
-
-    // Используем layout для автоматического позиционирования
-    QVBoxLayout *uavFrameLayout = new QVBoxLayout(uavFrame);
-    uavFrameLayout->setContentsMargins(15, 15, 15, 15);  // Отступы внутри рамки
-    uavFrameLayout->addWidget(uavChart);
-
-    //--------------------------------------------------
-    // ВК
-    //--------------------------------------------------
-
-    QBarSet *heliSet =
-            new QBarSet("ВК");
-
-    for(int i=0; i<heliCosts.size(); i++)
-    {
-        *heliSet << heliCosts[i] / 1000000.0;
-    }
-
-    heliSet->setColor(
-                QColor(0, 214, 217));
-
-    QBarSeries *heliSeries =
-            new QBarSeries();
-
-    heliSeries->append(heliSet);
-
-    QChart *heli =
-            new QChart();
-
-    heli->addSeries(
-                heliSeries);
-
-    heli->setTitle("<b>ВК</b>");
-
-    // Настройка фона и рамки в стиле HUD
-    heli->setBackgroundPen(QPen(Qt::NoPen));  // Убираем собственную рамку
-    heli->setBackgroundBrush(QBrush(QColor(255, 255, 255)));  // Белый фон
-    heli->setPlotAreaBackgroundVisible(true);
-    heli->setPlotAreaBackgroundBrush(QBrush(QColor(255, 255, 255)));
-
-    QStringList cats2;
-
-    for(int i=0; i<heliNames.size(); i++)
-    {
-        cats2 <<
-            heliNames[i]
-            + "\n("
-            + QString::number(heliCounts[i])
-            + ")";
-    }
-
-    QBarCategoryAxis *axis2 =
-            new QBarCategoryAxis();
-
-    axis2->append(cats2);
-    heli->layout()->setContentsMargins(0, 0, 0, 0);
-    heli->createDefaultAxes();
-
-    heli->setAxisX(
-                axis2,
-                heliSeries);
-
-    // axis2->setLabelsFont(axisFont);
-
-    heli->legend()->hide();
-
-    // Создаём QChartView без рамки
-    heliChart = new QChartView(heli);
-    heliChart->setStyleSheet("QChartView { border: none; background: transparent; }");
-
-    // Создаём фрейм-контейнер с голубой рамкой
-    QFrame *heliFrame = new QFrame(this);
-    heliFrame->setGeometry(660, 750, 630, 250);
-    heliFrame->setStyleSheet(
-        "QFrame{"
-        "    background-color: rgba(4,14,28,120);"
-        "    border: 1px solid rgba(0,255,255,120);"
-        "    border-radius: 15px;"
-        "}"
-    );
-
-    // Используем layout для автоматического позиционирования
-    QVBoxLayout *heliFrameLayout = new QVBoxLayout(heliFrame);
-    heliFrameLayout->setContentsMargins(15, 15, 15, 15);  // Отступы внутри рамки
-    heliFrameLayout->addWidget(heliChart);
-
-    //--------------------------------------------------
-    // АК
-    //--------------------------------------------------
-
-    QBarSet *planeSet =
-            new QBarSet("АК");
-
-    for(int i=0; i<planeCosts.size(); i++)
-    {
-        *planeSet << planeCosts[i] / 1000000.0;
-    }
-
-    planeSet->setColor(
-                QColor(82, 253, 255));
-
-    QBarSeries *planeSeries =
-            new QBarSeries();
-
-    planeSeries->append(
-                planeSet);
-
-    QChart *plane =
-            new QChart();
-
-    plane->addSeries(
-                planeSeries);
-
-    plane->setTitle("<b>АК</b>");
-
-    // Настройка фона и рамки в стиле HUD
-    plane->setBackgroundPen(QPen(Qt::NoPen));  // Убираем собственную рамку
-    plane->setBackgroundBrush(QBrush(QColor(255, 255, 255)));  // Белый фон
-    plane->setPlotAreaBackgroundVisible(true);
-    plane->setPlotAreaBackgroundBrush(QBrush(QColor(255, 255, 255)));
-
-    QStringList cats3;
-
-    for(int i=0; i<planeNames.size(); i++)
-    {
-        cats3 <<
-            planeNames[i]
-            + "\n("
-            + QString::number(planeCounts[i])
-            + ")";
-    }
-
-    QBarCategoryAxis *axis3 =
-            new QBarCategoryAxis();
-
-    axis3->append(cats3);
-    plane->layout()->setContentsMargins(0, 0, 0, 0);
-    plane->createDefaultAxes();
-
-    plane->setAxisX(
-                axis3,
-                planeSeries);
-
-    // axis3->setLabelsFont(axisFont);
-
-    plane->legend()->hide();
-
-    // Создаём QChartView без рамки
-    planeChart = new QChartView(plane);
-    planeChart->setStyleSheet("QChartView { border: none; background: transparent; }");
-
-    // Создаём фрейм-контейнер с голубой рамкой
-    QFrame *planeFrame = new QFrame(this);
-    planeFrame->setGeometry(1290, 750, 620, 250);
-    planeFrame->setStyleSheet(
-        "QFrame{"
-        "    background-color: rgba(4,14,28,120);"
-        "    border: 1px solid rgba(0,255,255,120);"
-        "    border-radius: 15px;"
-        "}"
-    );
-
-    // Используем layout для автоматического позиционирования
-    QVBoxLayout *planeFrameLayout = new QVBoxLayout(planeFrame);
-    planeFrameLayout->setContentsMargins(15, 15, 15, 15);  // Отступы внутри рамки
-    planeFrameLayout->addWidget(planeChart);
-
-    //--------------------------------------------------
-    // ОБЩИЙ ГРАФИК
-    //--------------------------------------------------
-
-    QLineSeries *series =
-            new QLineSeries();
-
-    double costMln =
-            bestCost / 1000000.0; // для графика в млн руб а не просто руб
-
-
-
-    for(int i = 0; i < graphTimes.size(); i++)
-    {    qDebug() << "graphTimes=" << graphTimes;
-        qDebug() << "graphCosts" << graphCosts;
-        series->append(
-            graphTimes[i],
-            graphCosts[i]);
-    }
-
-
-    /*
-    series->append(
-            0,
-            costMln * 1.2);
-
-    series->append(
-            bestOperationTime,
-            costMln);
-
-    series->append(
-            bestOperationTime * 1.2,
-            costMln * 1.1);
-    */
-
-
-
-    series->setColor(
-                QColor(255,80,180));
-
-    QChart *cost =
-            new QChart();
-
-    cost->addSeries(series);
-/*
-    for(int i = 0; i < riskCosts.size(); i++)
-    {
-        QLineSeries *riskLine =
-                new QLineSeries();
-
-        riskLine->append(
-                    0,
-                    riskCosts[i]);
-
-        riskLine->append(
-                    bestOperationTime * 1.2,
-                    riskCosts[i]);
-
-        QPen riskPen;
-        riskPen.setColor(
-                    QColor(
-                        riskColors[i]));
-
-        riskPen.setStyle(
-                    Qt::DashLine);
-
-        riskPen.setWidth(2);
-
-        riskLine->setPen(
-                    riskPen);
-
-        cost->addSeries(
-                    riskLine);
-    }
-    */
-
-    for(int i = 0; i < scenarios.size(); i++)
-    {
-        QScatterSeries *riskPoint =
-                new QScatterSeries();
-
-        riskPoint->setMarkerShape(
-                    QScatterSeries::MarkerShapeCircle);
-
-        riskPoint->setMarkerSize(16);
-
-        riskPoint->setColor(
-                    QColor(scenarios[i].color));
-
-        riskPoint->setBorderColor(Qt::white);
-
-        riskPoint->setName(
-                    scenarios[i].level);
-
-        riskPoint->append(
-                    scenarios[i].time,
-                    scenarios[i].cost / 1000000.0);
-
-        cost->addSeries(riskPoint);
-    }
-
-
-
-
-
-
-
-    //отдельная легенда для графика
-    cost->legend()->hide();
-
-    // Убираем внутренние отступы, чтобы график был вплотную к осям
-    cost->layout()->setContentsMargins(0, 0, 0, 0);
-
-    cost->createDefaultAxes();
-
-    QValueAxis *axisX =
-            qobject_cast<QValueAxis*>(cost->axisX());
-
-    QValueAxis *axisY =
-            qobject_cast<QValueAxis*>(cost->axisY());
-
-    axisX->setRange(
-                0,
-                bestOperationTime * 1.1);
-
-
-
-
-    /*
-    double maxRiskCost = costMln;
-
-    for(const auto &s : scenarios)
-    {
-        maxRiskCost = qMax(
-                    maxRiskCost,
-                    s.cost / 1000000.0);
-    }
-    axisY->setRange(
-                0,
-                maxRiskCost * 1.15);
-*/
-    double maxY = 0.0;
-
-    for(double cost : graphCosts)
-    {
-        maxY = qMax(maxY, cost);
-    }
-
-    for(const auto &s : scenarios)
-    {
-        maxY = qMax(
-                    maxY,
-                    s.cost / 1000000.0);
-    }
-
-    axisY->setRange(
-                0,
-                maxY * 1.15);
-
-
-
-    /*
-    for(QAbstractSeries *s : cost->series())
-    {
-        s->attachAxis(
-                    cost->axisX());
-
-        s->attachAxis(
-                    cost->axisY());
-    }
-    */
-
-    cost->setTitle(
-                "Затраты операции");
-
-    QPen pen;
-    pen.setColor(QColor(0, 105, 217));  // Розовый цвет
-    pen.setWidth(3);                      // Толщина линии
-    pen.setStyle(Qt::SolidLine);          // Сплошная линия
-    series->setPen(pen);
-
-    costChart = new QChartView(cost);
-    costChart->setStyleSheet("QChartView { border: none; background: transparent; }");
-
-    QFrame *costFrame = new QFrame(this);
-    costFrame->setGeometry(0, 400, 600, 350);
-    costFrame->setStyleSheet(
-        "QFrame{"
-        "    background-color: rgba(4,14,28,120);"
-        "    border: 1px solid rgba(0,255,255,120);"
-        "    border-radius: 15px;"
-        "}"
-    );
-
-    // Используем layout для автоматического позиционирования
-    QVBoxLayout *frameLayout = new QVBoxLayout(costFrame);
-
-    QHBoxLayout *legendLayout = new QHBoxLayout;
-
-    legendLayout->setSpacing(15);
-
-   /* legendLayout->addWidget(
-        createLegendItem(
-            QColor(0, 105, 217),
-            "Рациональный парк ВС"));
-*/
-    legendLayout->addWidget(
-        createLegendItem(
-            QColor("#00ff00"),
-            "Низкий риск"));
-
-    legendLayout->addWidget(
-        createLegendItem(
-            QColor("#ffff00"),
-            "Средний риск"));
-
-    legendLayout->addWidget(
-        createLegendItem(
-            QColor("#ff8800"),
-            "Высокий риск"));
-
-    legendLayout->addWidget(
-        createLegendItem(
-            QColor("#ff0000"),
-            "Критический риск"));
-
-    frameLayout->setContentsMargins(10, 10, 10, 10);
-
-    frameLayout->addLayout(legendLayout);
-
-    frameLayout->addWidget(costChart);
-
+    chartsManager.createCharts(
+        this,
+        aircraft,
+        operationResult,
+        graphTimes,
+        graphCosts,
+        scenarios);
 
     //--------------------------------------------------
     // ТЕКСТ РЕЗУЛЬТАТОВ
@@ -3724,55 +1921,40 @@ void OilSpillWindow::createCharts()
            + " м³<br>";
 
     txt += "Операция выполнена за: "
-    + QString::number(bestOperationTime, 'f', 1)
+    + QString::number(operationResult.bestOperationTime, 'f', 1)
     + " ч<br>";
-/*
-    txt +=
-            "доля времени на обнаружение (ε): "
-            + QString::number(
-                bestEpsilon,
-                'f',
-                1)
-            + "\n<br>";
-    txt +=
-            "доля времени на ликвидацию с ВК (β)= "
-            + QString::number(
-                bestBeta,
-                'f',
-                1)
-            + "\n<br>";
-*/
+
     txt += "<b>Рациональный парк</b><br>";
 
     txt += "БПЛА: "
-           + bestUAV
+           + operationResult.bestUAV
            + " ("
-           + QString::number(bestUAVCount)
+           + QString::number(operationResult.bestUAVCount)
            + ") — "
            + QString::number(
-                bestUAVCost / 1000000.0,
+                operationResult.bestUAVCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
 
     txt += "ВК: "
-           + bestHeli
+           + operationResult.bestHeli
            + " ("
-           + QString::number(bestHeliCount)
+           + QString::number(operationResult.bestHeliCount)
            + ") — "
            + QString::number(
-                bestHeliCost / 1000000.0,
+                operationResult.bestHeliCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
 
     txt += "АК: "
-           + bestPlane
+           + operationResult.bestPlane
            + " ("
-           + QString::number(bestPlaneCount)
+           + QString::number(operationResult.bestPlaneCount)
            + ") — "
            + QString::number(
-                bestPlaneCost / 1000000.0,
+                operationResult.bestPlaneCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
@@ -3781,50 +1963,230 @@ void OilSpillWindow::createCharts()
 
     txt += "Эксплуатация: "
            + QString::number(
-                operationCost / 1000000.0,
+                operationResult.operationCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
 
     txt += "Топливо: "
            + QString::number(
-                fuelCost / 1000000.0,
+                operationResult.fuelCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
 
     txt += "Материалы: "
            + QString::number(
-                materialCost / 1000000.0,
+                operationResult.materialCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.<br>";
-
-  //  txt += "<br>";
 
     txt +=
             "Экологический риск: ";
 
     txt +=
             "<span style='color:"
-            + riskColor
+            + operationResult.riskColor
             + ";'>●</span> ";
 
     txt +=
-            riskLevel
+            operationResult.riskLevel
             + " ("
             + QString::number(
-                riskValue,
+                operationResult.riskValue,
                 'f',
                 1)
             + ")";
 
+    double displayedTotalCost =
+            operationResult.bestCost;
+
+    for(const RiskScenario &scenario : scenarios)
+    {
+        if(qAbs(
+                scenario.time
+                -
+                operationResult.bestOperationTime)
+                < 0.01)
+        {
+            displayedTotalCost =
+                    scenario.cost;
+
+            break;
+        }
+    }
+
     txt += "<br><b>Итого: "
            + QString::number(
-                bestCost / 1000000.0,
+                displayedTotalCost / 1000000.0,
                 'f',
                 2)
            + " млн руб.</b>";
+
+    resultPanel->setText(txt);
+
+    resultPanel->setGeometry(
+                0,
+                0,
+                600,
+                390);
+}
+
+void OilSpillWindow::updateResultPanel()
+{
+    QString txt;
+
+    txt +=
+            "<div align='center'>"
+            "<span style='font-size:24px;"
+            "font-weight:700;"
+            "color:#7ffeff;'>"
+            "Результат"
+            "</span>"
+            "</div>";
+
+    txt +=
+            "Тип акватории: "
+            + waterType
+            + "<br>";
+
+    txt +=
+            "Ограничение на время: "
+            + QString::number(timeLimit)
+            + " ч<br>";
+
+    txt +=
+            "Объём выброса нефти: "
+            + QString::number(oilVolume)
+            + " м³<br>";
+
+    txt +=
+            "Операция выполнена за: "
+            + QString::number(
+                operationResult.bestOperationTime,
+                'f',
+                1)
+            + " ч<br>";
+
+    txt +=
+            "<b>Рациональный парк</b><br>";
+
+    txt +=
+            "БПЛА: "
+            + operationResult.bestUAV
+            + " ("
+            + QString::number(
+                operationResult.bestUAVCount)
+            + ") — "
+            + QString::number(
+                operationResult.bestUAVCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "ВК: "
+            + operationResult.bestHeli
+            + " ("
+            + QString::number(
+                operationResult.bestHeliCount)
+            + ") — "
+            + QString::number(
+                operationResult.bestHeliCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "АК: "
+            + operationResult.bestPlane
+            + " ("
+            + QString::number(
+                operationResult.bestPlaneCount)
+            + ") — "
+            + QString::number(
+                operationResult.bestPlaneCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "<b>Затраты</b><br>";
+
+    txt +=
+            "Эксплуатация: "
+            + QString::number(
+                operationResult.operationCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "Топливо: "
+            + QString::number(
+                operationResult.fuelCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "Материалы: "
+            + QString::number(
+                operationResult.materialCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.<br>";
+
+    txt +=
+            "Экологический риск: ";
+
+    txt +=
+            "<span style='color:"
+            + operationResult.riskColor
+            + ";'>●</span> ";
+
+    txt +=
+            operationResult.riskLevel
+            + " ("
+            + QString::number(
+                operationResult.riskValue,
+                'f',
+                1)
+            + ")";
+
+    double displayedTotalCost =
+            operationResult.bestCost;
+
+    for(const RiskScenario &scenario : scenarios)
+    {
+        if(qAbs(
+                scenario.time
+                -
+                operationResult.bestOperationTime)
+                < 0.01)
+        {
+            displayedTotalCost =
+                    scenario.cost;
+
+            break;
+        }
+    }
+
+    txt +=
+            "<br><b>Итого: "
+            + QString::number(
+                displayedTotalCost /
+                1000000.0,
+                'f',
+                2)
+            + " млн руб.</b>";
 
     resultPanel->setText(txt);
 

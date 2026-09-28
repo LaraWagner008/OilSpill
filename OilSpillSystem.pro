@@ -1,4 +1,5 @@
 QT += core gui widgets charts sql
+
 RESOURCES += resources.qrc
 
 CONFIG += c++11
@@ -6,11 +7,39 @@ CONFIG += c++11
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    oilspillwindow.cpp
+    oilspillwindow.cpp \
+    database/databasemanager.cpp \
+    calculations/uavcalculator.cpp \
+    calculations/helicoptercalculator.cpp \
+    calculations/airplanecalculator.cpp \
+    calculations/operationcalculator.cpp \
+    simulation/oilsimulation.cpp \
+    visualization/oilsimulationscene.cpp \
+    visualization/hudrenderer.cpp \
+    visualization/chartsmanager.cpp \
+    calculations/riskcalculator.cpp \
+    calculations/environmentcalculator.cpp
 
 HEADERS += \
     mainwindow.h \
-    oilspillwindow.h
+    oilspillwindow.h \
+    database/databasemanager.h \
+    models/environmentdata.h \
+    models/aircraftdata.h \
+    models/operationresult.h \
+    calculations/uavcalculator.h \
+    calculations/helicoptercalculator.h \
+    calculations/airplanecalculator.h \
+    calculations/operationcalculator.h \
+    simulation/oilsimulation.h \
+    visualization/oilsimulationscene.h \
+    visualization/hudrenderer.h \
+    visualization/chartsmanager.h \
+    models/riskscenario.h \
+    calculations/riskcalculator.h \
+    calculations/environmentcalculator.h \
+    models/operationconstants.h \
+    models/aircraftdatabase.h
 
 TARGET = OilSpillSystem
 

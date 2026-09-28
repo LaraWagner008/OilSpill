@@ -11,34 +11,25 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 
+#include "database/databasemanager.h"
+#include "models/environmentdata.h"
+#include "models/aircraftdata.h"
+#include "models/operationresult.h"
+#include "calculations/uavcalculator.h"
+#include "calculations/helicoptercalculator.h"
+#include "calculations/airplanecalculator.h"
+#include "calculations/operationcalculator.h"
+#include "simulation/oilsimulation.h"
+#include "visualization/oilsimulationscene.h"
+#include "visualization/hudrenderer.h"
+#include "visualization/chartsmanager.h"
+#include "models/riskscenario.h"
+#include "calculations/riskcalculator.h"
+#include "calculations/environmentcalculator.h"
+#include "models/operationconstants.h"
+#include "models/aircraftdatabase.h"
+
 QT_CHARTS_USE_NAMESPACE
-
-struct OilParticle
-{
-    double x;
-    double y;
-
-    double vx;
-    double vy;
-};
-
-struct RiskScenario
-{
-    QString level;
-    QString color;
-
-    double risk;
-    double time;
-    double cost;
-
-    QString uav;
-    QString heli;
-    QString plane;
-
-    int uavCount;
-    int heliCount;
-    int planeCount;
-};
 
 class OilSpillWindow : public QGraphicsView
 {
@@ -58,9 +49,7 @@ private slots:
 
 private:
     QVector<RiskScenario> scenarios;
-    QWidget* createLegendItem(
-            const QColor &color,
-            const QString &text);
+
     //----------------------------------
     // существующая модель
     //----------------------------------
@@ -81,9 +70,6 @@ private:
     QVector<double> graphOperationTimes;
 
     void drawScene();
-    void drawWater();
-    void drawOil();
-    void drawHUD();
 
     double degToRad(double deg);
 
@@ -91,7 +77,7 @@ private:
     // БД
     //----------------------------------
 
-    void connectDatabase();
+    //void connectDatabase();
     void loadConditions();
     void calculateOperation();
 
@@ -100,6 +86,7 @@ private:
     //----------------------------------
 
     void createCharts();
+    void updateResultPanel();
 
     //----------------------------------
     // расчеты
@@ -125,6 +112,7 @@ private:
     QTimer *timer;
 
     QLabel *hud;
+    HUDRenderer *hudRenderer;
 
     //----------------------------------
     // окна результатов
@@ -132,17 +120,15 @@ private:
 
     QLabel *resultPanel;
 
-    QChartView *uavChart;
-    QChartView *heliChart;
-    QChartView *planeChart;
-
-    QChartView *costChart;
+    ChartsManager chartsManager;
 
     //----------------------------------
     // БД
     //----------------------------------
 
-    QSqlDatabase db;
+
+    // БЫЛО QSqlDatabase db;
+    DatabaseManager databaseManager; //СТАЛО
 
     //----------------------------------
     // входные данные
@@ -157,111 +143,31 @@ private:
     // параметры среды
     //----------------------------------
 
-    double vCurrent;
-    double dCurrent;
+    EnvironmentData environment;
 
-    double vWind;
-    double dWind;
-
-    double kWind;
-
-    double driftVelocity;
-    double driftAngle;
-
-    double oilThickness;
     double minThickness;
-
-    double currentArea;
-    double maxArea;
-
-    double perimeter;
-
     double kSpread;
     double initialThickness;
-    double distanceShore;
-    double distanceBase;
-    double vulnerabilityCoefficient;
-    bool spreadingFinished;
-
-    //----------------------------------
-    // координаты
-    //----------------------------------
-
-    double worldX;
-    double worldY;
-
-    double cameraX;
-    double cameraY;
 
     //----------------------------------
     // результаты расчета
     //----------------------------------
+    AircraftData aircraft;
+    AircraftDatabase aircraftDatabase;
 
-    QString bestUAV;
-    QString bestHeli;
-    QString bestPlane;
+    OperationResult operationResult;
 
-    double bestUAVCost;
-    double bestHeliCost;
-    double bestPlaneCost;
+    UAVCalculator uavCalculator;
+    HelicopterCalculator helicopterCalculator;
+    AirplaneCalculator airplaneCalculator;
+    OperationCalculator operationCalculator;
+    RiskCalculator riskCalculator;
+    EnvironmentCalculator environmentCalculator;
+    OperationConstants operationConstants;
 
-    double bestUAVOperationCost;
-    double bestHeliOperationCost;
-    double bestPlaneOperationCost;
+    OilSimulation oilSimulation;
+    OilSimulationScene *oilScene;
 
-    double bestUAVFuelCost;
-    double bestHeliFuelCost;
-    double bestPlaneFuelCost;
-
-    QStringList uavNames;
-    QStringList heliNames;
-    QStringList planeNames;
-
-    QVector<double> uavCosts;
-    QVector<double> heliCosts;
-    QVector<double> planeCosts;
-
-    QVector<int> uavCounts;
-    QVector<int> heliCounts;
-    QVector<int> planeCounts;
-
-    int bestUAVCount;
-    int bestHeliCount;
-    int bestPlaneCount;
-
-    double bestEpsilon = 0.0;
-    double bestBeta = 0.0;
-
-
-
-    double bestCost;
-
-    //----------------------------------
-    // части затрат
-    //----------------------------------
-
-    double operationCost;
-    double fuelCost;
-    double materialCost;
-
-    double riskValue;
-    QString riskLevel;
-    QString riskColor;
-
-    // данные лучшей комбинации
-
-    int bestUAVId;
-    int bestHeliId;
-    int bestPlaneId;
-
-    double bestOperationTime;
-
-    double searchArea;
-
-    double oilMass;
-    double dispersantMass;
-    double boomsMass;
-    QVector<OilParticle> particles;
 };
 
 #endif
